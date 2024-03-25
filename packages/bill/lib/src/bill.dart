@@ -24,14 +24,16 @@ class Bill extends Equatable {
             : BillBodyForm(
                 name: map['name'] as String,
                 tags: map['tags'] as String,
-                date: DateTime.parse(map['date'] as String),
+                date: DateTime.fromMicrosecondsSinceEpoch(
+                  int.parse(map['date'] as String),
+                ),
                 currency: map['currency'] as String,
                 country: map['country'] as String,
                 price: map['price'] as double,
-                exchangeRate: map['exchangeRate'] as double,
+                exchangeRate: map['exchange_rate'] as double,
               );
 
-  Bill.loading() : this(body: BillBodyQr(''), type: BillType.loading);
+  Bill.loading() : this(body: const BillBodyQr(''), type: BillType.loading);
 
   bool get isLoading => type == BillType.loading;
 
@@ -61,9 +63,9 @@ abstract class BillBody extends Equatable {
 }
 
 class BillBodyQr implements BillBody {
-  final String url;
+  const BillBodyQr(this.url);
 
-  BillBodyQr(this.url);
+  final String url;
 
   @override
   Map<String, String> getPostBody({required String force}) {
@@ -90,7 +92,7 @@ class BillBodyQr implements BillBody {
       'currency': '',
       'country': '',
       'price': 0.0,
-      'exchangeRate': 0.0,
+      'exchange_rate': 0.0,
     };
   }
 
@@ -161,11 +163,11 @@ class BillBodyForm implements BillBody {
       'qr': '',
       'name': name,
       'tags': tags,
-      'date': date,
+      'date': date.microsecondsSinceEpoch.toString(),
       'currency': currency,
       'country': country,
       'price': price,
-      'exchangeRate': exchangeRate,
+      'exchange_rate': exchangeRate,
     };
   }
 

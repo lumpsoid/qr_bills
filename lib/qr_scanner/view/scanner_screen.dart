@@ -1,8 +1,40 @@
+import 'package:bill_repository/bill_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:provider/provider.dart';
-import 'package:qr_bills/src/bills_manager.dart';
-import 'package:bill/bill.dart';
+import 'package:qr_bills/qr_scanner/bloc/scanner_bloc.dart';
+import 'package:qr_bills/qr_scanner/qr_scanner.dart';
+
+class ScannerPage extends StatelessWidget {
+  const ScannerPage({super.key});
+
+  static Route<void> route() {
+    return MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (context) => BlocProvider(
+        create: (context) =>
+            ScannerBloc(billRepository: context.read<BillRepository>()),
+        child: const ScannerPage(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ScannerBloc, ScannerState>(
+        listenWhen: (previous, current) {
+          return previous is ScannerLoaded &&
+              current is ScannerLoaded &&
+              previous.url != current.url;
+        },
+        listener: (context, state) {
+          if (state is ScannerLoaded) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: const ScannerScreen());
+  }
+}
 
 class ScannerScreen extends StatelessWidget {
   const ScannerScreen({super.key});
@@ -12,6 +44,7 @@ class ScannerScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Scan QR')),
       body: Stack(
+        alignment: AlignmentDirectional.topCenter,
         children: [
           MobileScanner(
             controller: MobileScannerController(
@@ -19,11 +52,8 @@ class ScannerScreen extends StatelessWidget {
               formats: [BarcodeFormat.qrCode],
             ),
             onDetect: (capture) {
-              Navigator.pop(context);
-              BillsManager manager = context.read<BillsManager>();
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
-                debugPrint('Barcode found! ${barcode.rawValue}');
                 if (barcode.displayValue == null) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content: Text("Value of the qr is NULL",
@@ -31,14 +61,15 @@ class ScannerScreen extends StatelessWidget {
                     duration: Duration(seconds: 2),
                   ));
                 } else {
-                  manager.addBill(
-                      BillBodyQr(barcode.displayValue!), BillType.qr);
+                  context
+                      .read<ScannerBloc>()
+                      .add(ScannerQrScanned(url: barcode.displayValue!));
                 }
               }
             },
           ),
-          Align(
-            alignment: Alignment.center,
+          Positioned(
+            bottom: 50,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);

@@ -22,6 +22,20 @@ class BillRestApi {
 
   static const String serverApi = '/api/flutter';
 
+  Map<String, dynamic> parseResponse(String source) {
+    final jsonResponse = jsonDecode(source);
+    switch (jsonResponse['success'] as String) {
+      case 'parse_error':
+        return {'enum': SendResult.parseError, 'bill': jsonResponse['bill']};
+      case 'success':
+        return {'enum': SendResult.success, 'bill': jsonResponse['bill']};
+      case 'duplicates':
+        return {'enum': SendResult.duplicates, 'bill': jsonResponse['bill']};
+      default:
+        return {'enum': SendResult.error, 'bill': jsonResponse['bill']};
+    }
+  }
+
   Future<Map<String, dynamic>> sendQr(String serverUrl, Bill bill) async {
     Response response;
     final urlServer = Uri.http(serverUrl, '$serverApi/qr');
@@ -43,18 +57,8 @@ class BillRestApi {
     if (response.headers['content-type'] != 'application/json') {
       return {'enum': SendResult.typeMismatch, 'bill': null};
     }
-
-    final jsonResponse = jsonDecode(response.body);
-    switch (jsonResponse['success'] as String) {
-      case 'parse_error':
-        return {'enum': SendResult.parseError, 'bill': jsonResponse['bill']};
-      case 'success':
-        return {'enum': SendResult.success, 'bill': jsonResponse['bill']};
-      case 'duplicates':
-        return {'enum': SendResult.duplicates, 'bill': jsonResponse['bill']};
-      default:
-        return {'enum': SendResult.error, 'bill': jsonResponse['bill']};
-    }
+    final result = parseResponse(response.body);
+    return result;
   }
 
   Future<Map<String, dynamic>> sendForm(String serverUrl, Bill bill) async {
@@ -79,16 +83,13 @@ class BillRestApi {
       return {'enum': SendResult.typeMismatch, 'bill': null};
     }
 
-    final jsonResponse = jsonDecode(response.body);
-    switch (jsonResponse['success']) {
-      case 'parse_error':
-        return {'enum': SendResult.parseError, 'bill': jsonResponse['bill']};
-      case 'success':
-        return {'enum': SendResult.success, 'bill': jsonResponse['bill']};
-      case 'duplicates':
-        return {'enum': SendResult.duplicates, 'bill': jsonResponse['bill']};
-      default:
-        return {'enum': SendResult.error, 'bill': jsonResponse['bill']};
-    }
+    final result = parseResponse(response.body);
+    return result;
+  }
+
+  Future<List<String>> getCurrences() async {
+    // TODO implement
+    // TODO implement rest api endpoint
+    throw UnimplementedError();
   }
 }

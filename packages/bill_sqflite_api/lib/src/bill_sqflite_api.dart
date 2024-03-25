@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bill/bill.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -13,6 +14,8 @@ class BillSqfliteApi {
 
   Database? _db;
 
+  final _billsController = BehaviorSubject<List<Bill>>.seeded(const []);
+
   Future<Database> get db async {
     _db ??= await initDb();
     return _db!;
@@ -23,6 +26,11 @@ class BillSqfliteApi {
       final databasesPath = await getDatabasesPath();
       final path = join(databasesPath, 'bills.db');
       final db = await openDatabase(path, version: 1, onCreate: _onCreate);
+      final result = await db.rawQuery(
+        'SELECT * FROM bills ORDER BY id',
+      );
+      final bills = result.map(Bill.fromMap).toList();
+      _billsController.add(bills);
       return db;
     } catch (e) {
       print('Error initializing database: $e');
@@ -46,21 +54,22 @@ class BillSqfliteApi {
         date_created TEXT
       )
     ''');
+    await db.execute('''
+      CREATE TABLE currencies (
+        name TEXT PRIMARY KEY
+      )
+    ''');
   }
 
   Future<int> insertBill(Bill bill) async {
+    final bills = [..._billsController.value, bill];
+    _billsController.add(bills);
     final dbClient = await db;
-    return dbClient.insert('bills', await bill.toMap());
+    final result = await dbClient.insert('bills', await bill.toMap());
+    return result;
   }
 
-  Future<List<Bill>> fetchAllBills() async {
-    final dbClient = await db;
-    final result = await dbClient.rawQuery(
-      'SELECT * FROM bills ORDER BY id',
-    );
-    final bills = result.map(Bill.fromMap).toList();
-    return bills;
-  }
+  Stream<List<Bill>> getBills() => _billsController.asBroadcastStream();
 
   Future<List<Map<String, dynamic>>> getBill(int id) async {
     final dbClient = await db;
@@ -73,6 +82,14 @@ class BillSqfliteApi {
   }
 
   Future<int> updateBill(Bill bill) async {
+    final bills = [..._billsController.value];
+    final billIndex = bills.indexWhere((b) => b.id == bill.id);
+    if (billIndex != -1) {
+      bills[billIndex] = bill;
+    } else {
+      bills.add(bill);
+    }
+    _billsController.add(bills);
     final dbClient = await db;
     return dbClient.update(
       'bills',
@@ -83,8 +100,16 @@ class BillSqfliteApi {
   }
 
   Future<int> deleteBill(int id) async {
-    final dbClient = await db;
-    return dbClient.delete('bills', where: 'id = ?', whereArgs: [id]);
+    final bills = [..._billsController.value];
+    final billIndex = bills.indexWhere((b) => b.id == id);
+    if (billIndex == -1) {
+      throw Exception('Bill not found');
+    } else {
+      bills.removeAt(billIndex);
+      _billsController.add(bills);
+      final dbClient = await db;
+      return dbClient.delete('bills', where: 'id = ?', whereArgs: [id]);
+    }
   }
 
   Future<void> close() async {
@@ -95,5 +120,24 @@ class BillSqfliteApi {
       print(e);
       rethrow;
     }
+  }
+
+  Future<List<String>> getCurrences() async {
+    final dbClient = await db;
+    final result =
+        await dbClient.rawQuery('SELECT DISTINCT name FROM currencies');
+    return result.map((e) => e['currency']! as String).toList();
+  }
+
+  Future<void> setCurrences(List<String> currenciesList) async {
+    final dbClient = await db;
+    final batch = dbClient.batch();
+
+    for (final currency in currenciesList) {
+      batch.insert('currencies', {'name': currency});
+    }
+
+    // Committing the batch
+    await batch.commit();
   }
 }

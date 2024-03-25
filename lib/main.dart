@@ -12,7 +12,7 @@ Future<void> main() async {
   bootstrap(
     settingsApi:
         SettingsSharedApi(plugin: await SharedPreferences.getInstance()),
-    billSqfliteApi: BillSqfliteApi(),
+    billSqfliteApi: BillSqfliteApi()..initDb(),
     billRestApi: const BillRestApi(),
   );
 }

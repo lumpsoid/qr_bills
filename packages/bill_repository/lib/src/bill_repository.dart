@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bill/bill.dart';
 import 'package:bill_rest_api/bill_rest_api.dart';
 import 'package:bill_sqflite_api/bill_sqflite_api.dart';
@@ -20,10 +22,7 @@ class BillRepository {
   final BillRestApi _restApi;
   final SettingsSharedApi _settingsApi;
 
-  Future<List<Bill>> fetchAllBills() async {
-    final bills = await _localApi.fetchAllBills();
-    return bills;
-  }
+  Stream<List<Bill>> fetchAllBills() => _localApi.getBills();
 
   Future<void> addBillLocaly(BillBody body, BillType type) async {
     final bill = Bill(body: body, type: type);
@@ -34,13 +33,32 @@ class BillRepository {
     await _localApi.deleteBill(id);
   }
 
-  Future<void> sendBill(Bill bill) async {
+  Future<Map<String, dynamic>> sendBill(Bill bill) async {
     final settings = _settingsApi.settings;
+    Map<String, dynamic> result;
     if (bill.type == BillType.qr) {
-      await _restApi.sendQr(settings.serverUrl, bill);
+      result = await _restApi.sendQr(settings.serverUrl, bill);
     } else {
-      await _restApi.sendForm(settings.serverUrl, bill);
+      result = await _restApi.sendForm(settings.serverUrl, bill);
     }
-    await _localApi.deleteBill(bill.id);
+    if (result['enum'] == SendResult.success) {
+      await _localApi.deleteBill(bill.id);
+    }
+    return result;
   }
+
+  Future<List<String>> getCurrences() async {
+    final result = await _localApi.getCurrences();
+    if (result.isNotEmpty) {
+      return result;
+    }
+    final currenciesList = await _restApi.getCurrences();
+    unawaited(_localApi.setCurrences(currenciesList));
+    return currenciesList;
+  }
+
+  Future<String> getServerUrl() async => _settingsApi.settings.serverUrl;
+
+  Future<void> setServerUrl(String url) async =>
+      _settingsApi.updateServerUrl(url);
 }

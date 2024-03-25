@@ -1,66 +1,150 @@
+import 'package:bill_repository/bill_repository.dart';
+import 'package:bill_rest_api/bill_rest_api.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bill/bill.dart';
 import 'package:equatable/equatable.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 part 'bill_overview_event.dart';
 part 'bill_overview_state.dart';
 
 class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
-  BillOverviewBloc() : super(BillOverviewInitial()) {
-    on<BillOverviewEvent>((event, emit) {
-      // TODO: implement event handler
-    });
+  BillOverviewBloc({required BillRepository billRepository})
+      : _billRepository = billRepository,
+        super(const BillOverviewState()) {
+    on<BillOverviewSubscriptionRequested>(_onSubscriptionRequested);
+    on<BillOverviewSettingsRequested>(_onSettingsRequested);
+    on<BillOverviewServerUrlChanged>(_onServerUrlChange);
+    on<BillOverviewServerUrlSubmit>(_onServerUrlSubmit);
+    on<BillOverviewDeleteBill>(_onBillDelete);
+    on<BillOverviewSendBill>(_onBillSend);
   }
-  Future<void> _onFetchAll(int startingIndex) async {
-    if (_pagesBeingFetched.contains(startingIndex)) {
-      return;
+
+  final BillRepository _billRepository;
+
+  Future<void> _onSubscriptionRequested(
+    BillOverviewSubscriptionRequested event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    emit(state.copyWith(status: () => BillOverviewStatus.loading));
+
+    await emit.forEach<List<Bill>>(
+      _billRepository.fetchAllBills(),
+      onData: (bills) => state.copyWith(
+        bills: () => bills,
+        status: () => BillOverviewStatus.loaded,
+      ),
+      onError: (_, __) => state.copyWith(
+        status: () => BillOverviewStatus.error,
+      ),
+    );
+  }
+
+  Future<void> _onServerUrlChange(
+    BillOverviewServerUrlChanged event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    if (state.status != BillOverviewStatus.loaded) return;
+    emit(state.copyWith(serverUrl: () => event.url));
+  }
+
+  Future<void> _onServerUrlSubmit(
+    BillOverviewServerUrlSubmit event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    if (state.status != BillOverviewStatus.loaded) return;
+    if (state.serverUrl.isEmpty) return;
+    await _billRepository.setServerUrl(state.serverUrl);
+  }
+
+  Future<void> _onSettingsRequested(
+    BillOverviewSettingsRequested event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    final serverUrl = await _billRepository.getServerUrl();
+    emit(state.copyWith(
+        status: () => BillOverviewStatus.loaded, serverUrl: () => serverUrl));
+  }
+
+  Future<void> _onBillDelete(
+    BillOverviewDeleteBill event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    if (state.status != BillOverviewStatus.loaded) return;
+    await _billRepository.deleteBillLocaly(event.billId);
+  }
+
+  Future<void> _onBillSend(
+    BillOverviewSendBill event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    if (state.status != BillOverviewStatus.loaded) return;
+    emit(state.copyWith(
+        billsBeingSent: () => {
+              ...state.billsBeingSent,
+              event.bill.id,
+            }));
+    final result = await _billRepository.sendBill(event.bill);
+
+    switch (result['enum']) {
+      case SendResult.success:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () => BillResult(
+              message: 'Bill was added successfully.',
+              billResult: result['bill']),
+        ));
+      case SendResult.socketException:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () =>
+              const BillResult(message: 'Wrong server url. May be port.'),
+        ));
+      case SendResult.parseError:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () => const BillResult(message: 'Site parse failed.'),
+        ));
+      case SendResult.duplicates:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () => BillResult(
+              message: 'Duplicate was found in the Database.',
+              billResult: result['bill']),
+        ));
+      case SendResult.error:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () => const BillResult(
+              message:
+                  'SendResult.error was received. This should not happen.'),
+        ));
+      case SendResult.typeMismatch:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () =>
+              const BillResult(message: 'Server sent not a valid json.'),
+        ));
+      default:
+        emit(state.copyWith(
+          status: () => BillOverviewStatus.sendMessage,
+          billResult: () => const BillResult(
+              message: 'It is more absurd then SendResult.error.'),
+        ));
     }
+    final billsBeingSent = {...state.billsBeingSent};
+    billsBeingSent.remove(event.bill.id);
+    emit(state.copyWith(billsBeingSent: () => billsBeingSent));
+  }
 
-    _pagesBeingFetched.add(startingIndex);
-    final BillPage page = await _dbHelper.fetchBills(startingIndex);
-    _pagesBeingFetched.remove(startingIndex);
-
-    if (!page.hasNext) {
-      itemCount = startingIndex + page.items.length;
+  Future<void> _onUrlLaunch(
+    BillOverviewLaunchUrl event,
+    Emitter<BillOverviewState> emit,
+  ) async {
+    if (state.status != BillOverviewStatus.loaded) return;
+    final Uri urlParsed = Uri.parse(event.url);
+    if (!await launchUrl(urlParsed)) {
+      throw Exception('Could not launch $urlParsed');
     }
-
-    _bills.addAll(page.items);
-    // _pruneCache(startingIndex);
-
-    if (!_isDisposed) {
-      notifyListeners();
-    }
-  }
-
-  Future<void> _onAddBill(BillBody body, BillType type) async {
-    Bill bill = Bill(body: body, type: type);
-    _dbHelper.insertBill(bill);
-
-    if (itemCount != null) {
-      _bills.add(bill);
-      itemCount = itemCount! + 1;
-    }
-    notifyListeners();
-  }
-
-  Future<void> _onDeleteBill(int index) async {
-    Bill bill = _bills.removeAt(index);
-    itemCount = itemCount! - 1;
-    notifyListeners();
-    _dbHelper.deleteBill(bill.id);
-  }
-
-  bool isOnSend(int id) {
-    return _billsBeingSent.contains(id);
-  }
-
-  void startSend(int id) {
-    _billsBeingSent.add(id);
-    notifyListeners();
-  }
-
-  void stopSend(int id) {
-    _billsBeingSent.remove(id);
-    notifyListeners();
   }
 }

@@ -15,7 +15,7 @@ class SettingsSharedApi {
   }
 
   final SharedPreferences _plugin;
-  Settings? _settings;
+  late Settings? _settings;
 
   Settings get settings => _settings!;
 
@@ -29,16 +29,22 @@ class SettingsSharedApi {
   Settings _init() {
     final settingsJson = _getValue(kSettingsCollectionKey);
     if (settingsJson != null) {
+      print(settingsJson);
       final decodedSettings = jsonDecode(settingsJson) as Map<String, dynamic>;
       final settings = Settings.fromJson(decodedSettings);
       return settings;
     } else {
-      return const Settings(isDarkTheme: false, serverUrl: '');
+      return const Settings(isDarkTheme: false, serverUrl: 'http://');
     }
   }
 
   Future<void> setSettings(Settings settings) async {
     await _setValue(kSettingsCollectionKey, jsonEncode(settings.toJson()));
     _settings = settings;
+  }
+
+  Future<void> updateServerUrl(String serverUrl) async {
+    final settings = _settings!.copyWith(serverUrl: serverUrl);
+    await setSettings(settings);
   }
 }
