@@ -3,7 +3,7 @@ part of 'bill_overview_bloc.dart';
 enum BillOverviewStatus { initial, loading, loaded, error, sendMessage }
 
 final class BillResult extends Equatable {
-  const BillResult({this.billResult = const [], this.message = ''});
+  const BillResult({this.billResult = const [{}], this.message = ''});
 
   final List<Map<String, dynamic>> billResult;
   final String message;

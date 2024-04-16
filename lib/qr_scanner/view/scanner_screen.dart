@@ -22,17 +22,18 @@ class ScannerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<ScannerBloc, ScannerState>(
-        listenWhen: (previous, current) {
-          return previous is ScannerLoaded &&
-              current is ScannerLoaded &&
-              previous.url != current.url;
-        },
-        listener: (context, state) {
-          if (state is ScannerLoaded) {
-            Navigator.of(context).pop();
-          }
-        },
-        child: const ScannerScreen());
+      listenWhen: (previous, current) {
+        return previous is ScannerLoaded &&
+            current is ScannerLoaded &&
+            previous.url != current.url;
+      },
+      listener: (context, state) {
+        if (state is ScannerLoaded) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: const ScannerScreen(),
+    );
   }
 }
 

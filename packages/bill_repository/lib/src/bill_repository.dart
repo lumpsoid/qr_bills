@@ -34,12 +34,12 @@ class BillRepository {
   }
 
   Future<Map<String, dynamic>> sendBill(Bill bill) async {
-    final settings = _settingsApi.settings;
+    final serverUrl = await getServerUrl();
     Map<String, dynamic> result;
     if (bill.type == BillType.qr) {
-      result = await _restApi.sendQr(settings.serverUrl, bill);
+      result = await _restApi.sendQr(serverUrl, bill);
     } else {
-      result = await _restApi.sendForm(settings.serverUrl, bill);
+      result = await _restApi.sendForm(serverUrl, bill);
     }
     if (result['enum'] == SendResult.success) {
       await _localApi.deleteBill(bill.id);
@@ -47,14 +47,30 @@ class BillRepository {
     return result;
   }
 
-  Future<List<String>> getCurrences() async {
-    final result = await _localApi.getCurrences();
+  Future<List<String>> getCurrencies() async {
+    final result = await _localApi.getCurrencies();
     if (result.isNotEmpty) {
       return result;
     }
-    final currenciesList = await _restApi.getCurrences();
-    unawaited(_localApi.setCurrences(currenciesList));
+    final serverUrl = await getServerUrl();
+    final currenciesList = await _restApi.getCurrencies(serverUrl);
+    if (currenciesList.isNotEmpty) {
+      unawaited(_localApi.setCurrencies(currenciesList));
+    }
     return currenciesList;
+  }
+
+  Future<List<String>> getTags() async {
+    final result = await _localApi.getTags();
+    if (result.isNotEmpty) {
+      return result;
+    }
+    final serverUrl = await getServerUrl();
+    final tagsList = await _restApi.getTags(serverUrl);
+    if (tagsList.isNotEmpty) {
+      unawaited(_localApi.setTags(tagsList));
+    }
+    return tagsList;
   }
 
   Future<String> getServerUrl() async => _settingsApi.settings.serverUrl;

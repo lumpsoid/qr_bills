@@ -22,17 +22,39 @@ class BillRestApi {
 
   static const String serverApi = '/api/flutter';
 
+  List<Map<String, dynamic>> _parseBillList(List<dynamic> billList) {
+    List<Map<String, dynamic>> parsedList = [];
+    for (final bill in billList) {
+      if (bill is Map<String, dynamic>) {
+        parsedList.add(bill);
+      }
+    }
+    return parsedList;
+  }
+
   Map<String, dynamic> parseResponse(String source) {
-    final jsonResponse = jsonDecode(source);
+    final jsonResponse = jsonDecode(source) as Map<String, dynamic>;
     switch (jsonResponse['success'] as String) {
       case 'parse_error':
-        return {'enum': SendResult.parseError, 'bill': jsonResponse['bill']};
+        return {
+          'enum': SendResult.parseError,
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
+        };
       case 'success':
-        return {'enum': SendResult.success, 'bill': jsonResponse['bill']};
+        return {
+          'enum': SendResult.success,
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+        };
       case 'duplicates':
-        return {'enum': SendResult.duplicates, 'bill': jsonResponse['bill']};
+        return {
+          'enum': SendResult.duplicates,
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+        };
       default:
-        return {'enum': SendResult.error, 'bill': jsonResponse['bill']};
+        return {
+          'enum': SendResult.error,
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+        };
     }
   }
 
@@ -87,9 +109,49 @@ class BillRestApi {
     return result;
   }
 
-  Future<List<String>> getCurrences() async {
-    // TODO implement
-    // TODO implement rest api endpoint
-    throw UnimplementedError();
+  Future<List<String>> getCurrencies(String serverUrl) async {
+    Response response;
+    final urlServer = Uri.http(serverUrl, '$serverApi/get/currencies');
+    try {
+      response = await get(
+        urlServer,
+      );
+    } catch (e) {
+      rethrow;
+    }
+
+    // if (response.headers['content-type'] != 'application/json') {
+    //   return ['SOMETHING WRONG'];
+    // }
+    final result = jsonDecode(response.body) as List<dynamic>;
+    final stringList = result
+        .map<String>(
+          (element) => element.toString(),
+        )
+        .toList();
+    return stringList;
+  }
+
+  Future<List<String>> getTags(String serverUrl) async {
+    Response response;
+    final urlServer = Uri.http(serverUrl, '$serverApi/get/tags');
+    try {
+      response = await get(
+        urlServer,
+      );
+    } catch (e) {
+      rethrow;
+    }
+
+    // if (response.headers['content-type'] != 'application/json') {
+    //   return ['SOMETHING WRONG'];
+    // }
+    final result = jsonDecode(response.body) as List<dynamic>;
+    final stringList = result
+        .map<String>(
+          (element) => element.toString(),
+        )
+        .toList();
+    return stringList;
   }
 }

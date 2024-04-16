@@ -88,11 +88,11 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
 
     switch (result['enum']) {
       case SendResult.success:
+        final bill = result['bill'] as List<Map<String, dynamic>>;
         emit(state.copyWith(
           status: () => BillOverviewStatus.sendMessage,
           billResult: () => BillResult(
-              message: 'Bill was added successfully.',
-              billResult: result['bill']),
+              message: 'Bill was added successfully.', billResult: bill),
         ));
       case SendResult.socketException:
         emit(state.copyWith(
@@ -106,11 +106,12 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
           billResult: () => const BillResult(message: 'Site parse failed.'),
         ));
       case SendResult.duplicates:
+        final bill = result['bill'] as List<Map<String, dynamic>>;
         emit(state.copyWith(
           status: () => BillOverviewStatus.sendMessage,
           billResult: () => BillResult(
               message: 'Duplicate was found in the Database.',
-              billResult: result['bill']),
+              billResult: bill),
         ));
       case SendResult.error:
         emit(state.copyWith(
@@ -134,7 +135,10 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     }
     final billsBeingSent = {...state.billsBeingSent};
     billsBeingSent.remove(event.bill.id);
-    emit(state.copyWith(billsBeingSent: () => billsBeingSent));
+    emit(state.copyWith(
+      status: () => BillOverviewStatus.loaded,
+      billsBeingSent: () => billsBeingSent,
+    ));
   }
 
   Future<void> _onUrlLaunch(

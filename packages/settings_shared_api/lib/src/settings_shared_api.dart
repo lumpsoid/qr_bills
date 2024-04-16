@@ -29,12 +29,11 @@ class SettingsSharedApi {
   Settings _init() {
     final settingsJson = _getValue(kSettingsCollectionKey);
     if (settingsJson != null) {
-      print(settingsJson);
       final decodedSettings = jsonDecode(settingsJson) as Map<String, dynamic>;
       final settings = Settings.fromJson(decodedSettings);
       return settings;
     } else {
-      return const Settings(isDarkTheme: false, serverUrl: 'http://');
+      return const Settings(isDarkTheme: false, serverUrl: '192.168.1.19:5001');
     }
   }
 

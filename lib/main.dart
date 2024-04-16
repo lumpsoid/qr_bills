@@ -9,10 +9,15 @@ import 'package:qr_bills/bootstrap.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final settingsApi = SettingsSharedApi(
+    plugin: await SharedPreferences.getInstance(),
+  );
+  final billsLocalApi = BillSqfliteApi()..initDb();
+  const billsRestApi = BillRestApi();
+
   bootstrap(
-    settingsApi:
-        SettingsSharedApi(plugin: await SharedPreferences.getInstance()),
-    billSqfliteApi: BillSqfliteApi()..initDb(),
-    billRestApi: const BillRestApi(),
+    settingsApi: settingsApi,
+    billSqfliteApi: billsLocalApi,
+    billRestApi: billsRestApi,
   );
 }

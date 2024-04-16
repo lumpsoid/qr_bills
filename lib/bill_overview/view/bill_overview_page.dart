@@ -2,8 +2,10 @@ import 'package:bill_repository/bill_repository.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:qr_bills/add_screen/add_screen.dart';
 import 'package:qr_bills/bill_overview/bill_overview.dart';
 import 'package:qr_bills/form/form.dart';
+import 'package:qr_bills/qr_scanner/view/scanner_screen.dart';
 
 class BillsOverviewPage extends StatelessWidget {
   const BillsOverviewPage({super.key});
@@ -54,7 +56,7 @@ class BillsOverviewPage extends StatelessWidget {
     return showDialog(
         context: context,
         builder: (BuildContext _) => AlertDialog(
-              title: const Text('Bill Information'),
+              title: Text(message),
               content: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -127,26 +129,32 @@ class BillsOverviewScreen extends StatelessWidget {
                 builder: (context, state) {
                   switch (state.status) {
                     case BillOverviewStatus.initial:
-                      return const BillCardLoading();
+                      return const Center(
+                        child: Text('Initializing bills...'),
+                      );
                     case BillOverviewStatus.loading:
-                      return const BillCardLoading();
+                      return const CircularProgressIndicator();
                     case BillOverviewStatus.error:
-                      return const BillCardLoading();
+                      return const Center(
+                        child: Text('Failed in process.'),
+                      );
                     case BillOverviewStatus.loaded:
                       final bills = state.bills;
+                      if (bills.isEmpty) {
+                        return const Center(
+                          child: Text('No bills found'),
+                        );
+                      }
                       return ListView.builder(
                         itemCount: bills.length,
                         itemBuilder: (context, index) {
-                          final bill = bills[index];
-                          if (bill.isLoading) {
-                            return const BillCardLoading();
-                          } else {
-                            return BillCard(bill: bill, index: index);
-                          }
+                          return BillCard(bill: bills[index], index: index);
                         },
                       );
                     default:
-                      return const BillCardLoading();
+                      return const Center(
+                        child: Text('Default state.'),
+                      );
                   }
                 },
               ),
@@ -154,12 +162,27 @@ class BillsOverviewScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(FormPage.route());
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'qr',
+            onPressed: () {
+              Navigator.of(context).push(ScannerPage.route());
+            },
+            child: const Icon(Icons.qr_code_scanner),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: 'form',
+            onPressed: () {
+              Navigator.of(context).push(FormPage.route());
+            },
+            child: const Icon(Icons.article_outlined),
+          ),
+        ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

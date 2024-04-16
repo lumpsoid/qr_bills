@@ -13,61 +13,63 @@ class BillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      PopupMenuButton<String>(
-        offset: const Offset(25.0, 30.0),
-        itemBuilder: (BuildContext context) {
-          return [
-            PopupMenuItem<String>(
-              // value: '',
-              child: const Text('Info'),
-              onTap: () {
-                _showBillInfoDialog(context);
-              },
-            ),
-            const PopupMenuItem<String>(
-              value: 'option2',
-              child: Text('Select'),
-            ),
-            PopupMenuItem<String>(
-              // value: 'option3',
-              child: const Text('Delete'),
-              onTap: () {
-                context
-                    .read<BillOverviewBloc>()
-                    .add(BillOverviewDeleteBill(bill.id));
-              },
-            ),
-          ];
-        },
-      ),
-      Expanded(
-          child: Padding(
-        padding: const EdgeInsets.only(left: 10.0),
-        child: Text(bill.dateCreated, style: const TextStyle(fontSize: 16.0)),
-      )),
-      IconButton(
-        icon: BlocSelector<BillOverviewBloc, BillOverviewState, bool>(
-          selector: (state) {
-            if (state.status != BillOverviewStatus.loaded) {
-              return false;
-            }
-            return state.billsBeingSent.contains(bill.id);
-          },
-          builder: (context, isSending) {
-            return isSending
-                ? const CircularProgressIndicator()
-                : const Icon(Icons.send);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        PopupMenuButton<String>(
+          offset: const Offset(25.0, 30.0),
+          itemBuilder: (BuildContext context) {
+            return [
+              PopupMenuItem<String>(
+                // value: '',
+                child: const Text('Info'),
+                onTap: () {
+                  _showBillInfoDialog(context);
+                },
+              ),
+              const PopupMenuItem<String>(
+                value: 'option2',
+                child: Text('Select'),
+              ),
+              PopupMenuItem<String>(
+                // value: 'option3',
+                child: const Text('Delete'),
+                onTap: () {
+                  context
+                      .read<BillOverviewBloc>()
+                      .add(BillOverviewDeleteBill(bill.id));
+                },
+              ),
+            ];
           },
         ),
-        padding: const EdgeInsets.only(right: 20),
-        alignment: Alignment.centerRight,
-        onPressed: () {
-          context.read<BillOverviewBloc>().add(BillOverviewSendBill(bill));
-        },
-      ),
-      // TextButton(onPressed: onPressed, child: child),
-    ]);
+        Padding(
+          padding: const EdgeInsets.only(left: 10.0),
+          child: Text(bill.dateCreated, style: const TextStyle(fontSize: 16.0)),
+        ),
+        IconButton(
+          icon: BlocSelector<BillOverviewBloc, BillOverviewState, bool>(
+            selector: (state) {
+              if (state.status != BillOverviewStatus.loaded) {
+                return false;
+              }
+              return state.billsBeingSent.contains(bill.id);
+            },
+            builder: (context, isSending) {
+              return isSending
+                  ? const CircularProgressIndicator()
+                  : const Icon(Icons.send);
+            },
+          ),
+          padding: const EdgeInsets.only(right: 20),
+          alignment: Alignment.centerRight,
+          onPressed: () {
+            context.read<BillOverviewBloc>().add(BillOverviewSendBill(bill));
+          },
+        ),
+        // TextButton(onPressed: onPressed, child: child),
+      ],
+    );
   }
 
   Future<void> _showBillInfoDialog(BuildContext context) {
@@ -119,23 +121,5 @@ class BillCard extends StatelessWidget {
     if (!await launchUrl(urlParsed)) {
       throw Exception('Could not launch $urlParsed');
     }
-  }
-}
-
-class BillCardLoading extends StatelessWidget {
-  const BillCardLoading({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Card(
-      margin: EdgeInsets.all(16.0),
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text(
-          '...',
-          style: TextStyle(fontSize: 16.0),
-        ),
-      ),
-    );
   }
 }

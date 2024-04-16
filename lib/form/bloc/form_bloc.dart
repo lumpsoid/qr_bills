@@ -6,10 +6,10 @@ import 'package:equatable/equatable.dart';
 part 'form_event.dart';
 part 'form_state.dart';
 
-class FormBloc extends Bloc<FormEvent, FormBlocState> {
-  FormBloc({required BillRepository billRepository})
+class BillFormBloc extends Bloc<FormEvent, BillFormState> {
+  BillFormBloc({required BillRepository billRepository})
       : _billRepository = billRepository,
-        super(FormInitial()) {
+        super(BillFormInitial()) {
     on<FormInit>(_onInit);
     on<FormBillAdd>(_onBillAdd);
     on<FormNameChanged>(_onNameChanged);
@@ -22,25 +22,22 @@ class FormBloc extends Bloc<FormEvent, FormBlocState> {
 
   Future<void> _onInit(
     FormInit event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    emit(FormLoading());
-    // TODO change from localApi request to restApi
-    final currencyList = await _billRepository.getCurrences();
-    if (currencyList.isEmpty) {
-      currencyList.add('rsd');
-    }
-    final stateLoaded = FormLoaded.empty(DateTime.now());
-    emit(stateLoaded.copyWith(currencyList: currencyList));
+    emit(BillFormLoading());
+    final currencyList = await _billRepository.getCurrencies();
+    final tagsList = await _billRepository.getTags();
+    final stateLoaded = BillFormLoaded.empty(DateTime.now());
+    emit(stateLoaded.copyWith(currencyList: currencyList, tagsList: tagsList));
   }
 
   Future<void> _onBillAdd(
     FormBillAdd event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
     try {
-      if (state is FormLoaded) {
-        final stateLoaded = state as FormLoaded;
+      if (state is BillFormLoaded) {
+        final stateLoaded = state as BillFormLoaded;
         final body = BillBodyForm(
           name: stateLoaded.name,
           tags: stateLoaded.tags,
@@ -52,59 +49,59 @@ class FormBloc extends Bloc<FormEvent, FormBlocState> {
         );
         await _billRepository.addBillLocaly(body, BillType.form);
       }
-      emit(FormSuccess());
-      emit(FormLoaded.empty(DateTime.now()));
+      emit(BillFormSuccess());
+      emit(BillFormLoaded.empty(DateTime.now()));
     } catch (e) {
-      emit(FormError());
+      emit(BillFormError());
     }
   }
 
   Future<void> _onNameChanged(
     FormNameChanged event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    if (state is FormLoaded) {
-      final stateLoaded = state as FormLoaded;
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
       emit(stateLoaded.copyWith(name: event.name));
     }
   }
 
   Future<void> _onTagsChanged(
     FormTagsChanged event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    if (state is FormLoaded) {
-      final stateLoaded = state as FormLoaded;
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
       emit(stateLoaded.copyWith(tags: event.tags));
     }
   }
 
   Future<void> _onDateChanged(
     FormDateChanged event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    if (state is FormLoaded) {
-      final stateLoaded = state as FormLoaded;
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
       emit(stateLoaded.copyWith(date: event.date));
     }
   }
 
   Future<void> _onPriceChanged(
     FormPriceChanged event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    if (state is FormLoaded) {
-      final stateLoaded = state as FormLoaded;
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
       emit(stateLoaded.copyWith(price: event.price));
     }
   }
 
   Future<void> _onCurrencyChanged(
     FormCurrencyChanged event,
-    Emitter<FormBlocState> emit,
+    Emitter<BillFormState> emit,
   ) async {
-    if (state is FormLoaded) {
-      final stateLoaded = state as FormLoaded;
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
       emit(stateLoaded.copyWith(currency: event.currency));
     }
   }

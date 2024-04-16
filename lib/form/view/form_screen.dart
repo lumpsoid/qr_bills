@@ -12,7 +12,7 @@ class FormPage extends StatelessWidget {
     return MaterialPageRoute(
       builder: (context) => BlocProvider(
         create: (context) =>
-            FormBloc(billRepository: context.read<BillRepository>())
+            BillFormBloc(billRepository: context.read<BillRepository>())
               ..add(const FormInit()),
         child: const FormPage(),
       ),
@@ -21,14 +21,18 @@ class FormPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<FormBloc, FormBlocState>(
-      listenWhen: (previous, current) {
-        return previous is FormLoading && current is FormSuccess;
-      },
+    return BlocListener<BillFormBloc, BillFormState>(
+      listenWhen: (previous, current) =>
+          previous != current && current is BillFormSuccess,
       listener: (context, state) {
         Navigator.of(context).pop();
       },
-      child: const FormScreen(),
+      child: BlocProvider(
+        create: (context) =>
+            BillFormBloc(billRepository: context.read<BillRepository>())
+              ..add(const FormInit()),
+        child: const FormScreen(),
+      ),
     );
   }
 }
@@ -72,7 +76,7 @@ class _SubmitButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: () {
-        context.read<FormBloc>().add(const FormBillAdd());
+        context.read<BillFormBloc>().add(const FormBillAdd());
 
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Bill is added to the app list",
@@ -90,12 +94,10 @@ class _NameField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return TextField(
       decoration: const InputDecoration(labelText: 'Name'),
-      validator: (value) => value!.isEmpty ? 'Name is required' : null,
       onChanged: (value) =>
-          context.read<FormBloc>().add(FormNameChanged(value)),
-      initialValue: '',
+          context.read<BillFormBloc>().add(FormNameChanged(value)),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s()]')),
       ],
@@ -108,14 +110,58 @@ class _TagField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      decoration: const InputDecoration(labelText: 'Tags'),
-      onChanged: (value) =>
-          context.read<FormBloc>().add(FormTagsChanged(value)),
-      initialValue: '',
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[a-z,]')),
-      ],
+    return BlocBuilder<BillFormBloc, BillFormState>(
+      builder: (context, state) {
+        switch (state) {
+          case BillFormLoaded():
+            return Autocomplete<String>(
+              fieldViewBuilder: (context, textEditingController, focusNode,
+                  onFieldSubmitted) {
+                return TextField(
+                  maxLines: 1,
+                  focusNode: focusNode,
+                  controller: textEditingController,
+                  decoration: const InputDecoration(labelText: 'Tags'),
+                  onChanged: (value) =>
+                      context.read<BillFormBloc>().add(FormTagsChanged(value)),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-z,]')),
+                  ],
+                );
+              },
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text == '') {
+                  return const Iterable.empty();
+                }
+                return state.tagsList.where((option) =>
+                    option.contains(textEditingValue.text.toLowerCase()));
+              },
+              optionsViewBuilder: (context, onSelected, options) => Container(
+                color: Theme.of(context).colorScheme.background,
+                child: ListView(
+                  children: options
+                      .map((option) => GestureDetector(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 15.0),
+                              ),
+                            ),
+                            onTap: () {
+                              onSelected(option);
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+              onSelected: (option) =>
+                  context.read<BillFormBloc>().add(FormTagsChanged(option)),
+            );
+          default:
+            return const CircularProgressIndicator();
+        }
+      },
     );
   }
 }
@@ -141,7 +187,7 @@ class _DatePickField extends StatelessWidget {
               lastDate: DateTime.now(),
             );
             if (pickedDate != null) {
-              context.read<FormBloc>().add(FormDateChanged(pickedDate));
+              context.read<BillFormBloc>().add(FormDateChanged(pickedDate));
             }
           },
         ),
@@ -159,8 +205,9 @@ class _PriceField extends StatelessWidget {
       decoration: const InputDecoration(labelText: 'Price'),
       keyboardType: TextInputType.number,
       validator: (value) => value!.isEmpty ? 'Price is required' : null,
-      onSaved: (value) =>
-          context.read<FormBloc>().add(FormPriceChanged(double.parse(value!))),
+      onSaved: (value) => context
+          .read<BillFormBloc>()
+          .add(FormPriceChanged(double.parse(value!))),
       initialValue: '',
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
@@ -174,9 +221,9 @@ class _CurrencyField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FormBloc, FormBlocState>(
+    return BlocBuilder<BillFormBloc, BillFormState>(
       builder: (context, state) {
-        if (state is FormLoaded) {
+        if (state is BillFormLoaded) {
           return DropdownButtonFormField(
             value: state.currency,
             items: state.currencyList
@@ -186,7 +233,7 @@ class _CurrencyField extends StatelessWidget {
                     ))
                 .toList(),
             onChanged: (value) => context
-                .read<FormBloc>()
+                .read<BillFormBloc>()
                 .add(FormCurrencyChanged(value as String)),
           );
         } else {
@@ -202,14 +249,14 @@ class _ExchageRateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<FormBloc, FormBlocState>(
+    return BlocBuilder<BillFormBloc, BillFormState>(
       builder: (context, state) {
-        if (state is FormLoaded) {
+        if (state is BillFormLoaded) {
           return TextFormField(
             decoration: const InputDecoration(labelText: 'Exchange Rate'),
             keyboardType: TextInputType.number,
             onChanged: (value) => context
-                .read<FormBloc>()
+                .read<BillFormBloc>()
                 .add(FormPriceChanged(double.parse(value))),
             initialValue: state.exchangeRate.toString(),
             inputFormatters: [

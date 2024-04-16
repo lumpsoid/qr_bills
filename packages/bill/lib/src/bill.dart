@@ -136,7 +136,7 @@ class BillBodyForm implements BillBody {
       'currency': currency,
       'country': country,
       'tags': tags,
-      'exchange-rate': exchangeRate.toString(),
+      'exchange_rate': exchangeRate.toString(),
       'force': force,
     };
   }

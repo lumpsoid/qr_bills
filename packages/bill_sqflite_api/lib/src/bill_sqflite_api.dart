@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:bill/bill.dart';
 import 'package:rxdart/rxdart.dart';
@@ -33,7 +34,7 @@ class BillSqfliteApi {
       _billsController.add(bills);
       return db;
     } catch (e) {
-      print('Error initializing database: $e');
+      log('Error initializing database: $e');
       rethrow; // Rethrow the error to see the stack trace
     }
   }
@@ -56,6 +57,11 @@ class BillSqfliteApi {
     ''');
     await db.execute('''
       CREATE TABLE currencies (
+        name TEXT PRIMARY KEY
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE tags (
         name TEXT PRIMARY KEY
       )
     ''');
@@ -117,24 +123,45 @@ class BillSqfliteApi {
     try {
       await dbClient.close();
     } catch (e) {
-      print(e);
+      log('Error closing BillSqfliteApi: $e');
       rethrow;
     }
   }
 
-  Future<List<String>> getCurrences() async {
+  Future<List<String>> getCurrencies() async {
     final dbClient = await db;
     final result =
         await dbClient.rawQuery('SELECT DISTINCT name FROM currencies');
-    return result.map((e) => e['currency']! as String).toList();
+    if (result.isEmpty) {
+      return [];
+    }
+    return result.map((e) => e['name']! as String).toList();
   }
 
-  Future<void> setCurrences(List<String> currenciesList) async {
+  Future<void> setCurrencies(List<String> currenciesList) async {
     final dbClient = await db;
     final batch = dbClient.batch();
 
     for (final currency in currenciesList) {
       batch.insert('currencies', {'name': currency});
+    }
+
+    // Committing the batch
+    await batch.commit();
+  }
+
+  Future<List<String>> getTags() async {
+    final dbClient = await db;
+    final result = await dbClient.rawQuery('SELECT DISTINCT name FROM tags');
+    return result.map((e) => e['name']! as String).toList();
+  }
+
+  Future<void> setTags(List<String> tagsList) async {
+    final dbClient = await db;
+    final batch = dbClient.batch();
+
+    for (final tag in tagsList) {
+      batch.insert('tags', {'name': tag});
     }
 
     // Committing the batch
