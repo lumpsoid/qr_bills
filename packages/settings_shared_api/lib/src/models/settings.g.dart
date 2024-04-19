@@ -7,7 +7,7 @@ part of 'settings.dart';
 // **************************************************************************
 
 Settings _$SettingsFromJson(Map<String, dynamic> json) => Settings(
-      isDarkTheme: json['isDarkTheme'] as bool,
+      isDarkTheme: json['theme'] as bool,
       serverUrl: json['serverUrl'] as String,
     );
 

@@ -25,7 +25,7 @@ class AppView extends StatelessWidget {
     return const MaterialApp(
       // theme: FlutterTodosTheme.light,
       // darkTheme: FlutterTodosTheme.dark,
-      home: BillsPage(),
+      home: BillsOverviewPage(),
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bill/bill.dart';
 import 'package:bill_rest_api/bill_rest_api.dart';
 import 'package:bill_sqflite_api/bill_sqflite_api.dart';
@@ -20,13 +22,9 @@ class BillRepository {
   final BillRestApi _restApi;
   final SettingsSharedApi _settingsApi;
 
-  Future<List<Bill>> fetchAllBills() async {
-    final bills = await _localApi.fetchAllBills();
-    return bills;
-  }
+  Stream<List<Bill>> getBills() => _localApi.getBills();
 
-  Future<void> addBillLocaly(BillBody body, BillType type) async {
-    final bill = Bill(body: body, type: type);
+  Future<void> addBillLocaly(Bill bill) async {
     await _localApi.insertBill(bill);
   }
 
@@ -34,13 +32,48 @@ class BillRepository {
     await _localApi.deleteBill(id);
   }
 
-  Future<void> sendBill(Bill bill) async {
-    final settings = _settingsApi.settings;
+  Future<Map<String, dynamic>> sendBill(Bill bill) async {
+    final serverUrl = await getServerUrl();
+    Map<String, dynamic> result;
     if (bill.type == BillType.qr) {
-      await _restApi.sendQr(settings.serverUrl, bill);
+      result = await _restApi.sendQr(serverUrl, bill);
     } else {
-      await _restApi.sendForm(settings.serverUrl, bill);
+      result = await _restApi.sendForm(serverUrl, bill);
     }
-    await _localApi.deleteBill(bill.id);
+    if (result['enum'] == SendResult.success) {
+      await _localApi.deleteBill(bill.id);
+    }
+    return result;
   }
+
+  Future<List<String>> getCurrencies() async {
+    final result = await _localApi.getCurrencies();
+    if (result.isNotEmpty) {
+      return result;
+    }
+    final serverUrl = await getServerUrl();
+    final currenciesList = await _restApi.getCurrencies(serverUrl);
+    if (currenciesList.isNotEmpty) {
+      unawaited(_localApi.setCurrencies(currenciesList));
+    }
+    return currenciesList;
+  }
+
+  Future<List<String>> getTags() async {
+    final result = await _localApi.getTags();
+    if (result.isNotEmpty) {
+      return result;
+    }
+    final serverUrl = await getServerUrl();
+    final tagsList = await _restApi.getTags(serverUrl);
+    if (tagsList.isNotEmpty) {
+      unawaited(_localApi.setTags(tagsList));
+    }
+    return tagsList;
+  }
+
+  Future<String> getServerUrl() async => _settingsApi.settings.serverUrl;
+
+  Future<void> setServerUrl(String url) async =>
+      _settingsApi.updateServerUrl(url);
 }

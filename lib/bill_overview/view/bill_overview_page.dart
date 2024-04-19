@@ -1,19 +1,105 @@
+import 'package:bill_repository/bill_repository.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qr_bills/bill_overview/bloc/bill_overview_bloc.dart';
+import 'package:qr_bills/bill_overview/bill_overview.dart';
+import 'package:qr_bills/form/form.dart';
+import 'package:qr_bills/qr_scanner/view/scanner_screen.dart';
 
-class BillsPage extends StatelessWidget {
-  const BillsPage({super.key});
+class BillsOverviewPage extends StatelessWidget {
+  const BillsOverviewPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-        create: (context) => BillOverviewBloc(), child: const BillsScreen());
+      create: (context) =>
+          BillOverviewBloc(billRepository: context.read<BillRepository>())
+            ..add(const BillOverviewSubscriptionRequested())
+            ..add(const BillOverviewSettingsRequested()),
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<BillOverviewBloc, BillOverviewState>(
+            listenWhen: (previous, current) =>
+                previous != current &&
+                current.status == BillOverviewStatus.sendMessage,
+            listener: (context, state) {
+              final billResult = state.billResult;
+              _showBillResultDialog(
+                context,
+                billResult.message,
+                billResult.billResult,
+              );
+            },
+          ),
+          BlocListener<BillOverviewBloc, BillOverviewState>(
+            listenWhen: (previous, current) =>
+                previous != current &&
+                current.status == BillOverviewStatus.error,
+            listener: (context, state) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                backgroundColor: Colors.red,
+                content: Text(
+                  state.message,
+                  style: const TextStyle(fontSize: 16.0),
+                ),
+                duration: const Duration(seconds: 2),
+              ));
+            },
+          ),
+        ],
+        child: const BillsOverviewScreen(),
+      ),
+    );
+  }
+
+  Future<void> _showBillResultDialog(
+      BuildContext context, String message, List<dynamic> bill) {
+    if (bill.isEmpty) return Future(() => null);
+    return showDialog(
+        context: context,
+        builder: (BuildContext _) => AlertDialog(
+              title: Text(message),
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Name: ${bill[0]['name']}'),
+                  // const SizedBox(height: 8),
+                  Text('Date: ${bill[0]['date']}'),
+                  Text('Price: ${bill[0]['price']}'),
+                  Text('Items: ${bill[0]['items']}'),
+                  Text('Duplicates: ${bill[0]['duplicates']}'),
+                  RichText(
+                      text: TextSpan(
+                        text: 'URL',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            context
+                                .read<BillOverviewBloc>()
+                                .add(BillOverviewLaunchUrl(bill[0]['link']));
+                          },
+                      ),
+                      maxLines: 2),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ));
   }
 }
 
-class BillsScreen extends StatelessWidget {
-  const BillsScreen({super.key});
+class BillsOverviewScreen extends StatelessWidget {
+  const BillsOverviewScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,18 +114,8 @@ class BillsScreen extends StatelessWidget {
                   value: 'chooseServer',
                   child: const Text('Server URL'),
                   onTap: () async {
-                    var newUrl = await SettingsManager.getServerUrl();
-                    await _dialogEditServerUrl(context, newUrl);
+                    await _dialogEditServerUrl(context);
                   },
-                ),
-                PopupMenuItem<String>(
-                  value: 'option2',
-                  child: const Text('Option 2'),
-                  onTap: () {},
-                ),
-                const PopupMenuItem<String>(
-                  value: 'option3',
-                  child: Text('Option 3'),
                 ),
               ];
             },
@@ -50,86 +126,86 @@ class BillsScreen extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: Selector<BillsManager, int?>(
-                selector: (context, manager) => manager.itemCount,
-                builder: (context, itemCount, child) => ListView.builder(
-                  // padding: const EdgeInsets.only(bottom: 64.0),
-                  itemCount: itemCount,
-                  itemBuilder: (context, index) {
-                    BillsManager manager = Provider.of<BillsManager>(context);
-                    final bill = manager.getByIndex(index);
-
-                    // Use a different approach to create NoteCard based on note state
-                    if (bill.isLoading) {
-                      return const BillCardLoading();
-                    } else {
-                      return BillCard(bill: bill, index: index);
-                    }
-                  },
-                ),
+              child: BlocBuilder<BillOverviewBloc, BillOverviewState>(
+                builder: (context, state) {
+                  switch (state.status) {
+                    case BillOverviewStatus.initial:
+                      return const Center(
+                        child: Text('Initializing bills...'),
+                      );
+                    case BillOverviewStatus.loading:
+                      return const CircularProgressIndicator();
+                    case BillOverviewStatus.loaded || BillOverviewStatus.error:
+                      final bills = state.bills;
+                      if (bills.isEmpty) {
+                        if (state.status == BillOverviewStatus.error &&
+                            state.message.isEmpty) {
+                          return const Center(
+                            child: Text('Failed in bills set up.'),
+                          );
+                        }
+                        return const Center(
+                          child: Text('No bills found'),
+                        );
+                      }
+                      return ListView.builder(
+                        itemCount: bills.length,
+                        itemBuilder: (context, index) {
+                          return BillCard(bill: bills[index], index: index);
+                        },
+                      );
+                    default:
+                      return const Center(
+                        child: Text('Default state.'),
+                      );
+                  }
+                },
               ),
             ),
-            Dismissible(
-                // drag to the right (edit)
-                background: Container(
-                  color: Colors.blue[50],
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 30.0),
-                  child: const Icon(Icons.text_snippet_outlined),
-                ),
-                // drag to the left (delete)
-                secondaryBackground: Container(
-                  color: Colors.green[50],
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 30.0),
-                  child: const Icon(Icons.qr_code),
-                ),
-                confirmDismiss: (DismissDirection direction) async {
-                  // start form
-                  if (direction == DismissDirection.startToEnd) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const FormFillScreen()),
-                    );
-                    return false;
-                  }
-                  // start qr scan
-                  if (direction == DismissDirection.endToStart) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ScannerScreen()),
-                    );
-                    return false;
-                  }
-                  return false;
-                },
-                key: const Key('qwertyuiop'),
-                child: Container(
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 5.0, horizontal: 16.0),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10.0, horizontal: 15.0),
-                    child: const Text("Add new",
-                        style: TextStyle(fontSize: 16.0))))
           ],
         ),
       ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: FloatingActionButton(
+              heroTag: 'qr',
+              onPressed: () {
+                Navigator.of(context).push(ScannerPage.route());
+              },
+              child: const Icon(Icons.qr_code_scanner),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: FloatingActionButton(
+              heroTag: 'form',
+              onPressed: () {
+                Navigator.of(context).push(FormPage.route());
+              },
+              child: const Icon(Icons.article_outlined),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  Future<void> _dialogEditServerUrl(BuildContext context, String newUrl) async {
+  Future<void> _dialogEditServerUrl(BuildContext context) async {
     await showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext _) {
+        final urlInitial = context.read<BillOverviewBloc>().state.serverUrl;
         return AlertDialog(
           title: const Text('Edit server url'),
           content: TextFormField(
-            initialValue: newUrl,
-            onChanged: (value) {
-              newUrl = value;
-            },
+            initialValue: urlInitial,
+            onChanged: (urlNew) => context
+                .read<BillOverviewBloc>()
+                .add(BillOverviewServerUrlChanged(urlNew)),
           ),
           actions: <Widget>[
             TextButton(
@@ -140,11 +216,10 @@ class BillsScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                if (newUrl.isNotEmpty) {
-                  // Update the item in the list
-                  SettingsManager.setServerUrl(newUrl);
-                  Navigator.of(context).pop();
-                }
+                Navigator.of(context).pop();
+                context
+                    .read<BillOverviewBloc>()
+                    .add(const BillOverviewServerUrlSubmit());
               },
               child: const Text('Save'),
             ),

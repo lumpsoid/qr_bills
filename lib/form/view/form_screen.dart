@@ -1,30 +1,39 @@
+import 'package:bill_repository/bill_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_bills/form/form.dart';
 
-import '../bills_manager.dart';
-import '../model/bill.dart' show BillBodyForm, BillType;
+class FormPage extends StatelessWidget {
+  const FormPage({super.key});
 
-class FormFillScreen extends StatefulWidget {
-  const FormFillScreen({super.key});
+  static MaterialPageRoute route() {
+    return MaterialPageRoute(
+      builder: (context) => BlocProvider(
+        create: (context) =>
+            BillFormBloc(billRepository: context.read<BillRepository>())
+              ..add(const FormInit()),
+        child: const FormPage(),
+      ),
+    );
+  }
 
   @override
-  FormFillScreenState createState() => FormFillScreenState();
+  Widget build(BuildContext context) {
+    return BlocListener<BillFormBloc, BillFormState>(
+      listenWhen: (previous, current) =>
+          previous != current && current is BillFormSuccess,
+      listener: (context, state) {
+        Navigator.of(context).pop();
+      },
+      child: const FormScreen(),
+    );
+  }
 }
 
-class FormFillScreenState extends State<FormFillScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  String _name = '';
-  String _tags = '';
-  DateTime _startDate = DateTime.now();
-  double _price = 0.0;
-  String _selectedCurrency = 'rsd';
-  String _selectedCountry = 'serbia';
-  double _exchangeRate = 1.0;
-
-  final List<String> _currencies = ['rsd', 'eur', 'rub', 'usd'];
-  final List<String> _countries = ['serbia', 'russia', 'Canada', 'Japan'];
+class FormScreen extends StatelessWidget {
+  const FormScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,112 +41,22 @@ class FormFillScreenState extends State<FormFillScreen> {
       appBar: AppBar(
         title: const Text('Bill Form'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(20.0),
         child: Form(
-          key: _formKey,
           child: Column(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextFormField(
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  validator: (value) =>
-                      value!.isEmpty ? 'Name is required' : null,
-                  onSaved: (value) => setState(() => _name = value!)),
-              const SizedBox(height: 20.0),
-              TextFormField(
-                  decoration: const InputDecoration(
-                      labelText: 'Tags (separated by commas)'),
-                  onSaved: (value) => setState(() => _tags = value!)),
-              const SizedBox(height: 20.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Bill Date:'),
-                  Text(DateFormat.yMd().format(_startDate)),
-                  ElevatedButton(
-                    child: const Text('Select'),
-                    onPressed: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _startDate,
-                        firstDate: DateTime(2023),
-                        lastDate: DateTime.now(),
-                      );
-                      if (pickedDate != null) {
-                        setState(() => _startDate = pickedDate);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20.0),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value!.isEmpty ? 'Price is required' : null,
-                onSaved: (value) =>
-                    setState(() => _price = double.parse(value!)),
-              ),
-              const SizedBox(height: 20.0),
-              DropdownButtonFormField(
-                  value: _selectedCurrency,
-                  items: _currencies
-                      .map((currency) => DropdownMenuItem(
-                            value: currency,
-                            child: Text(currency),
-                          ))
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCurrency = value as String)),
-              const SizedBox(height: 20.0),
-              DropdownButtonFormField(
-                  value: _selectedCountry,
-                  items: _countries
-                      .map((country) => DropdownMenuItem(
-                            value: country,
-                            child: Text(country),
-                          ))
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCountry = value as String)),
-              const SizedBox(height: 20.0),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Exchange Rate'),
-                keyboardType: TextInputType.number,
-                initialValue: _exchangeRate.toString(),
-                validator: (value) =>
-                    value!.isEmpty ? 'Exchange rate is required' : null,
-                onSaved: (value) =>
-                    setState(() => _exchangeRate = double.parse(value!)),
-              ),
-              const SizedBox(height: 20.0),
-              ElevatedButton(
-                onPressed: () {
-                  _formKey.currentState!.save();
-                  if (_formKey.currentState!.validate()) {
-                    BillsManager manager = context.read<BillsManager>();
-                    manager.addBill(
-                        BillBodyForm(
-                            name: _name,
-                            tags: _tags,
-                            date: _startDate,
-                            currency: _selectedCurrency,
-                            country: _selectedCountry,
-                            price: _price,
-                            exchangeRate: _exchangeRate),
-                        BillType.form);
-
-                    _formKey.currentState?.reset();
-
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(
-                      content: Text("Bill is added to the app list", style: TextStyle(fontSize: 16.0)),
-                      duration: Duration(seconds: 2),
-                    ));
-                  }
-                },
-                child: const Text('Submit'),
+              _NameField(),
+              _TagField(),
+              _DatePickField(),
+              _PriceField(),
+              _CurrencyField(),
+              _ExchageRateField(),
+              Padding(
+                padding: EdgeInsets.all(16.0),
+                child: _SubmitButton(),
               ),
             ],
           ),
@@ -146,4 +65,206 @@ class FormFillScreenState extends State<FormFillScreen> {
     );
   }
 }
-  
+
+class _SubmitButton extends StatelessWidget {
+  const _SubmitButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        context.read<BillFormBloc>().add(const FormBillAdd());
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Bill is added to the app list",
+              style: TextStyle(fontSize: 16.0)),
+          duration: Duration(seconds: 2),
+        ));
+      },
+      child: const Text('Submit'),
+    );
+  }
+}
+
+class _NameField extends StatelessWidget {
+  const _NameField();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      decoration: const InputDecoration(labelText: 'Name'),
+      onChanged: (value) =>
+          context.read<BillFormBloc>().add(FormNameChanged(value)),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s()]')),
+      ],
+    );
+  }
+}
+
+class _TagField extends StatelessWidget {
+  const _TagField();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<BillFormBloc, BillFormState>(
+      builder: (context, state) {
+        switch (state) {
+          case BillFormLoaded():
+            return Autocomplete<String>(
+              fieldViewBuilder: (context, textEditingController, focusNode,
+                  onFieldSubmitted) {
+                return TextFormField(
+                  maxLines: 1,
+                  focusNode: focusNode,
+                  controller: textEditingController,
+                  decoration: const InputDecoration(labelText: 'Tags'),
+                  onChanged: (value) =>
+                      context.read<BillFormBloc>().add(FormTagsChanged(value)),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-z,]')),
+                  ],
+                );
+              },
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text == '') {
+                  return const Iterable.empty();
+                }
+                return state.tagsList.where((option) =>
+                    option.contains(textEditingValue.text.toLowerCase()));
+              },
+              optionsViewBuilder: (context, onSelected, options) => Container(
+                color: Theme.of(context).colorScheme.background,
+                child: ListView(
+                  children: options
+                      .map((option) => GestureDetector(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                option,
+                                style: const TextStyle(fontSize: 15.0),
+                              ),
+                            ),
+                            onTap: () {
+                              onSelected(option);
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+              onSelected: (option) =>
+                  context.read<BillFormBloc>().add(FormTagsChanged(option)),
+            );
+          default:
+            return const CircularProgressIndicator();
+        }
+      },
+    );
+  }
+}
+
+class _DatePickField extends StatelessWidget {
+  const _DatePickField();
+
+  @override
+  Widget build(BuildContext context) {
+    final startDate = DateTime.now();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text('Bill Date:'),
+        Text(DateFormat.yMd().format(startDate)),
+        ElevatedButton(
+          child: const Text('Select'),
+          onPressed: () async {
+            await showDatePicker(
+              context: context,
+              initialDate: startDate,
+              firstDate: DateTime(2023),
+              lastDate: DateTime.now(),
+            ).then((value) {
+              if (value != null) {
+                context.read<BillFormBloc>().add(FormDateChanged(value));
+              }
+            });
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceField extends StatelessWidget {
+  const _PriceField();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      decoration: const InputDecoration(labelText: 'Price'),
+      keyboardType: TextInputType.number,
+      validator: (value) => value!.isEmpty ? 'Price is required' : null,
+      onSaved: (value) => context
+          .read<BillFormBloc>()
+          .add(FormPriceChanged(double.parse(value!))),
+      initialValue: '',
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+      ],
+    );
+  }
+}
+
+class _CurrencyField extends StatelessWidget {
+  const _CurrencyField();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<BillFormBloc, BillFormState>(
+      builder: (context, state) {
+        if (state is BillFormLoaded) {
+          return DropdownButtonFormField(
+            value: state.currency,
+            items: state.currencyList
+                .map((currency) => DropdownMenuItem(
+                      value: currency,
+                      child: Text(currency),
+                    ))
+                .toList(),
+            onChanged: (value) => context
+                .read<BillFormBloc>()
+                .add(FormCurrencyChanged(value as String)),
+          );
+        } else {
+          return const CircularProgressIndicator();
+        }
+      },
+    );
+  }
+}
+
+class _ExchageRateField extends StatelessWidget {
+  const _ExchageRateField();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<BillFormBloc, BillFormState>(
+      builder: (context, state) {
+        if (state is BillFormLoaded) {
+          return TextFormField(
+            decoration: const InputDecoration(labelText: 'Exchange Rate'),
+            keyboardType: TextInputType.number,
+            onChanged: (value) => context
+                .read<BillFormBloc>()
+                .add(FormPriceChanged(double.parse(value))),
+            initialValue: state.exchangeRate.toString(),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            ],
+          );
+        } else {
+          return const CircularProgressIndicator();
+        }
+      },
+    );
+  }
+}

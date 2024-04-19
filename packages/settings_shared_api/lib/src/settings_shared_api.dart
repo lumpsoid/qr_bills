@@ -1,7 +1,8 @@
 import 'dart:convert';
+
 import 'package:meta/meta.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:settings_shared_api/settings_shared_api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// {@template settings_shared_api}
 /// A Very Good Project created by Very Good CLI.
@@ -15,7 +16,7 @@ class SettingsSharedApi {
   }
 
   final SharedPreferences _plugin;
-  Settings? _settings;
+  late Settings? _settings;
 
   Settings get settings => _settings!;
 
@@ -33,12 +34,17 @@ class SettingsSharedApi {
       final settings = Settings.fromJson(decodedSettings);
       return settings;
     } else {
-      return const Settings(isDarkTheme: false, serverUrl: '');
+      return const Settings(isDarkTheme: false, serverUrl: '192.168.1.19:5001');
     }
   }
 
   Future<void> setSettings(Settings settings) async {
     await _setValue(kSettingsCollectionKey, jsonEncode(settings.toJson()));
     _settings = settings;
+  }
+
+  Future<void> updateServerUrl(String serverUrl) async {
+    final settings = _settings!.copyWith(serverUrl: serverUrl);
+    await setSettings(settings);
   }
 }

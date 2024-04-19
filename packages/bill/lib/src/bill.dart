@@ -8,6 +8,7 @@ enum BillType { qr, form, loading }
 class Bill extends Equatable {
   /// {@macro bill}
   Bill({
+    required this.name,
     required this.body,
     required this.type,
     int? id,
@@ -17,6 +18,7 @@ class Bill extends Equatable {
 
   Bill.fromMap(Map<String, dynamic> map)
       : id = map['id'] as int,
+        name = map['bill_name'] as String,
         type = BillType.values.firstWhere((e) => e.toString() == map['type']),
         dateCreated = map['date_created'] as String,
         body = map['qr'] != ''
@@ -24,18 +26,26 @@ class Bill extends Equatable {
             : BillBodyForm(
                 name: map['name'] as String,
                 tags: map['tags'] as String,
-                date: DateTime.parse(map['date'] as String),
+                date: DateTime.fromMicrosecondsSinceEpoch(
+                  int.parse(map['date'] as String),
+                ),
                 currency: map['currency'] as String,
                 country: map['country'] as String,
                 price: map['price'] as double,
-                exchangeRate: map['exchangeRate'] as double,
+                exchangeRate: map['exchange_rate'] as double,
               );
 
-  Bill.loading() : this(body: BillBodyQr(''), type: BillType.loading);
+  Bill.loading()
+      : this(
+          name: '',
+          body: const BillBodyQr(''),
+          type: BillType.loading,
+        );
 
   bool get isLoading => type == BillType.loading;
 
   final int id;
+  final String name;
   final BillType type;
   final BillBody body;
   final String dateCreated;
@@ -50,7 +60,13 @@ class Bill extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, type, body, dateCreated];
+  List<Object?> get props => [
+        id,
+        type,
+        body,
+        dateCreated,
+        name,
+      ];
 }
 
 abstract class BillBody extends Equatable {
@@ -61,9 +77,9 @@ abstract class BillBody extends Equatable {
 }
 
 class BillBodyQr implements BillBody {
-  final String url;
+  const BillBodyQr(this.url);
 
-  BillBodyQr(this.url);
+  final String url;
 
   @override
   Map<String, String> getPostBody({required String force}) {
@@ -90,7 +106,7 @@ class BillBodyQr implements BillBody {
       'currency': '',
       'country': '',
       'price': 0.0,
-      'exchangeRate': 0.0,
+      'exchange_rate': 0.0,
     };
   }
 
@@ -106,14 +122,6 @@ class BillBodyQr implements BillBody {
 }
 
 class BillBodyForm implements BillBody {
-  final String name;
-  final String tags;
-  final DateTime date;
-  final String currency;
-  final String country;
-  final double price;
-  final double exchangeRate;
-
   BillBodyForm({
     required this.name,
     required this.tags,
@@ -123,6 +131,13 @@ class BillBodyForm implements BillBody {
     required this.price,
     required this.exchangeRate,
   });
+  final String name;
+  final String tags;
+  final DateTime date;
+  final String currency;
+  final String country;
+  final double price;
+  final double exchangeRate;
 
   @override
   Map<String, String> getPostBody({required String force}) {
@@ -134,7 +149,7 @@ class BillBodyForm implements BillBody {
       'currency': currency,
       'country': country,
       'tags': tags,
-      'exchange-rate': exchangeRate.toString(),
+      'exchange_rate': exchangeRate.toString(),
       'force': force,
     };
   }
@@ -146,13 +161,13 @@ class BillBodyForm implements BillBody {
 
   @override
   String getUrl() {
-    return "?name=$name&"
+    return '?name=$name&'
         "date=${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}&"
-        "price=$price"
-        "currency=$currency&"
-        "country=$country&"
-        "tags=$tags&"
-        "exchange-rate=$exchangeRate";
+        'price=$price'
+        'currency=$currency&'
+        'country=$country&'
+        'tags=$tags&'
+        'exchange-rate=$exchangeRate';
   }
 
   @override
@@ -161,11 +176,11 @@ class BillBodyForm implements BillBody {
       'qr': '',
       'name': name,
       'tags': tags,
-      'date': date,
+      'date': date.microsecondsSinceEpoch.toString(),
       'currency': currency,
       'country': country,
       'price': price,
-      'exchangeRate': exchangeRate,
+      'exchange_rate': exchangeRate,
     };
   }
 

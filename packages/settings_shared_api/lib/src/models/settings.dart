@@ -1,6 +1,6 @@
-import 'package:meta/meta.dart';
-import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+import 'package:meta/meta.dart';
 
 part 'settings.g.dart';
 
@@ -11,6 +11,11 @@ class Settings extends Equatable {
     required this.isDarkTheme,
     required this.serverUrl,
   });
+
+  /// Connect the generated [_$PersonFromJson] function to the `fromJson`
+  /// factory.
+  factory Settings.fromJson(Map<String, dynamic> json) =>
+      _$SettingsFromJson(json);
 
   final bool isDarkTheme;
   final String serverUrl;
@@ -24,11 +29,6 @@ class Settings extends Equatable {
       serverUrl: serverUrl ?? this.serverUrl,
     );
   }
-
-  /// Connect the generated [_$PersonFromJson] function to the `fromJson`
-  /// factory.
-  factory Settings.fromJson(Map<String, dynamic> json) =>
-      _$SettingsFromJson(json);
 
   /// Connect the generated [_$SettingsToJson] function to the `toJson` method.
   Map<String, dynamic> toJson() => _$SettingsToJson(this);
