@@ -41,11 +41,12 @@ class FormScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Bill Form'),
       ),
-      body: Form(
-        child: SingleChildScrollView(
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(20.0),
+        child: Form(
           child: Column(
             mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               _NameField(),
               _TagField(),
