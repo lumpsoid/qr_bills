@@ -1,7 +1,8 @@
 import 'package:bill/bill.dart';
 import 'package:bill_repository/bill_repository.dart';
-import 'package:bloc/bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:username_generator/username_generator.dart';
 
 part 'form_event.dart';
 part 'form_state.dart';
@@ -47,7 +48,13 @@ class BillFormBloc extends Bloc<FormEvent, BillFormState> {
           price: stateLoaded.price,
           exchangeRate: stateLoaded.exchangeRate,
         );
-        await _billRepository.addBillLocaly(body, BillType.form);
+        await _billRepository.addBillLocaly(
+          Bill(
+            type: BillType.form,
+            body: body,
+            name: UsernameGenerator().generateRandom(),
+          ),
+        );
       }
       emit(BillFormSuccess());
       emit(BillFormLoaded.empty(DateTime.now()));

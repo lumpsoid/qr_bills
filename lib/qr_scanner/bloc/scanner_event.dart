@@ -8,9 +8,9 @@ sealed class ScannerEvent extends Equatable {
 }
 
 final class ScannerQrScanned extends ScannerEvent {
-  final String url;
-
   const ScannerQrScanned({required this.url});
+
+  final String url;
 
   @override
   List<Object> get props => [url];

@@ -23,7 +23,7 @@ class BillRestApi {
   static const String serverApi = '/api/flutter';
 
   List<Map<String, dynamic>> _parseBillList(List<dynamic> billList) {
-    List<Map<String, dynamic>> parsedList = [];
+    final parsedList = <Map<String, dynamic>>[];
     for (final bill in billList) {
       if (bill is Map<String, dynamic>) {
         parsedList.add(bill);
@@ -43,17 +43,17 @@ class BillRestApi {
       case 'success':
         return {
           'enum': SendResult.success,
-          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
         };
       case 'duplicates':
         return {
           'enum': SendResult.duplicates,
-          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
         };
       default:
         return {
           'enum': SendResult.error,
-          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>)
+          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
         };
     }
   }
@@ -129,6 +129,7 @@ class BillRestApi {
           (element) => element.toString(),
         )
         .toList();
+
     return stringList;
   }
 

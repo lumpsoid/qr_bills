@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:bill/bill.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:path/path.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// {@template bill_sqflite_api}
@@ -39,10 +39,21 @@ class BillSqfliteApi {
     }
   }
 
-  void _onCreate(Database db, int version) async {
+  Future<void> close() async {
+    final dbClient = await db;
+    try {
+      await dbClient.close();
+    } catch (e) {
+      log('Error closing BillSqfliteApi: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE bills (
         id INTEGER PRIMARY KEY,
+        bill_name TEXT,
         type TEXT,
         qr TEXT,
         name TEXT,
@@ -67,14 +78,6 @@ class BillSqfliteApi {
     ''');
   }
 
-  Future<int> insertBill(Bill bill) async {
-    final bills = [..._billsController.value, bill];
-    _billsController.add(bills);
-    final dbClient = await db;
-    final result = await dbClient.insert('bills', await bill.toMap());
-    return result;
-  }
-
   Stream<List<Bill>> getBills() => _billsController.asBroadcastStream();
 
   Future<List<Map<String, dynamic>>> getBill(int id) async {
@@ -85,6 +88,14 @@ class BillSqfliteApi {
   Future<List<Map<String, dynamic>>> getIds() async {
     final dbClient = await db;
     return dbClient.query('bills', columns: ['id']);
+  }
+
+  Future<int> insertBill(Bill bill) async {
+    final dbClient = await db;
+    final result = await dbClient.insert('bills', await bill.toMap());
+    final bills = [..._billsController.value, bill];
+    _billsController.add(bills);
+    return result;
   }
 
   Future<int> updateBill(Bill bill) async {
@@ -110,22 +121,11 @@ class BillSqfliteApi {
     final billIndex = bills.indexWhere((b) => b.id == id);
     if (billIndex == -1) {
       throw Exception('Bill not found');
-    } else {
-      bills.removeAt(billIndex);
-      _billsController.add(bills);
-      final dbClient = await db;
-      return dbClient.delete('bills', where: 'id = ?', whereArgs: [id]);
     }
-  }
-
-  Future<void> close() async {
+    bills.removeAt(billIndex);
+    _billsController.add(bills);
     final dbClient = await db;
-    try {
-      await dbClient.close();
-    } catch (e) {
-      log('Error closing BillSqfliteApi: $e');
-      rethrow;
-    }
+    return dbClient.delete('bills', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<String>> getCurrencies() async {
@@ -145,8 +145,6 @@ class BillSqfliteApi {
     for (final currency in currenciesList) {
       batch.insert('currencies', {'name': currency});
     }
-
-    // Committing the batch
     await batch.commit();
   }
 
@@ -163,8 +161,6 @@ class BillSqfliteApi {
     for (final tag in tagsList) {
       batch.insert('tags', {'name': tag});
     }
-
-    // Committing the batch
     await batch.commit();
   }
 }

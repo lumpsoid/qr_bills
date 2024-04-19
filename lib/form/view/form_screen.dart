@@ -27,12 +27,7 @@ class FormPage extends StatelessWidget {
       listener: (context, state) {
         Navigator.of(context).pop();
       },
-      child: BlocProvider(
-        create: (context) =>
-            BillFormBloc(billRepository: context.read<BillRepository>())
-              ..add(const FormInit()),
-        child: const FormScreen(),
-      ),
+      child: const FormScreen(),
     );
   }
 }
@@ -46,11 +41,11 @@ class FormScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Bill Form'),
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(20.0),
-        child: Form(
+      body: Form(
+        child: SingleChildScrollView(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NameField(),
               _TagField(),
@@ -58,7 +53,10 @@ class FormScreen extends StatelessWidget {
               _PriceField(),
               _CurrencyField(),
               _ExchageRateField(),
-              _SubmitButton(),
+              Padding(
+                padding: EdgeInsets.all(16.0),
+                child: _SubmitButton(),
+              ),
             ],
           ),
         ),
@@ -68,9 +66,7 @@ class FormScreen extends StatelessWidget {
 }
 
 class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({
-    super.key,
-  });
+  const _SubmitButton();
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +90,7 @@ class _NameField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       decoration: const InputDecoration(labelText: 'Name'),
       onChanged: (value) =>
           context.read<BillFormBloc>().add(FormNameChanged(value)),
@@ -117,7 +113,7 @@ class _TagField extends StatelessWidget {
             return Autocomplete<String>(
               fieldViewBuilder: (context, textEditingController, focusNode,
                   onFieldSubmitted) {
-                return TextField(
+                return TextFormField(
                   maxLines: 1,
                   focusNode: focusNode,
                   controller: textEditingController,
@@ -180,15 +176,16 @@ class _DatePickField extends StatelessWidget {
         ElevatedButton(
           child: const Text('Select'),
           onPressed: () async {
-            DateTime? pickedDate = await showDatePicker(
+            await showDatePicker(
               context: context,
               initialDate: startDate,
               firstDate: DateTime(2023),
               lastDate: DateTime.now(),
-            );
-            if (pickedDate != null) {
-              context.read<BillFormBloc>().add(FormDateChanged(pickedDate));
-            }
+            ).then((value) {
+              if (value != null) {
+                context.read<BillFormBloc>().add(FormDateChanged(value));
+              }
+            });
           },
         ),
       ],

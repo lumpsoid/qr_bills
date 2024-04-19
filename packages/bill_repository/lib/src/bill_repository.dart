@@ -22,10 +22,9 @@ class BillRepository {
   final BillRestApi _restApi;
   final SettingsSharedApi _settingsApi;
 
-  Stream<List<Bill>> fetchAllBills() => _localApi.getBills();
+  Stream<List<Bill>> getBills() => _localApi.getBills();
 
-  Future<void> addBillLocaly(BillBody body, BillType type) async {
-    final bill = Bill(body: body, type: type);
+  Future<void> addBillLocaly(Bill bill) async {
     await _localApi.insertBill(bill);
   }
 

@@ -18,6 +18,7 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     on<BillOverviewServerUrlSubmit>(_onServerUrlSubmit);
     on<BillOverviewDeleteBill>(_onBillDelete);
     on<BillOverviewSendBill>(_onBillSend);
+    on<BillOverviewLaunchUrl>(_onUrlLaunch);
   }
 
   final BillRepository _billRepository;
@@ -26,16 +27,17 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     BillOverviewSubscriptionRequested event,
     Emitter<BillOverviewState> emit,
   ) async {
-    emit(state.copyWith(status: () => BillOverviewStatus.loading));
+    emit(state.copyWith(status: BillOverviewStatus.loading));
 
     await emit.forEach<List<Bill>>(
-      _billRepository.fetchAllBills(),
+      _billRepository.getBills(),
       onData: (bills) => state.copyWith(
-        bills: () => bills,
-        status: () => BillOverviewStatus.loaded,
+        status: BillOverviewStatus.loaded,
+        bills: bills,
       ),
       onError: (_, __) => state.copyWith(
-        status: () => BillOverviewStatus.error,
+        status: BillOverviewStatus.error,
+        message: 'Error loading bills',
       ),
     );
   }
@@ -45,7 +47,7 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     Emitter<BillOverviewState> emit,
   ) async {
     if (state.status != BillOverviewStatus.loaded) return;
-    emit(state.copyWith(serverUrl: () => event.url));
+    emit(state.copyWith(serverUrl: event.url));
   }
 
   Future<void> _onServerUrlSubmit(
@@ -63,7 +65,9 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
   ) async {
     final serverUrl = await _billRepository.getServerUrl();
     emit(state.copyWith(
-        status: () => BillOverviewStatus.loaded, serverUrl: () => serverUrl));
+      status: BillOverviewStatus.loaded,
+      serverUrl: serverUrl,
+    ));
   }
 
   Future<void> _onBillDelete(
@@ -71,7 +75,15 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     Emitter<BillOverviewState> emit,
   ) async {
     if (state.status != BillOverviewStatus.loaded) return;
-    await _billRepository.deleteBillLocaly(event.billId);
+    try {
+      await _billRepository.deleteBillLocaly(event.billId);
+    } catch (_) {
+      emit(state.copyWith(
+        status: BillOverviewStatus.error,
+        message: 'Error deleting bill. Bill was not found.',
+      ));
+      emit(state.copyWith(status: BillOverviewStatus.loaded));
+    }
   }
 
   Future<void> _onBillSend(
@@ -80,64 +92,66 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
   ) async {
     if (state.status != BillOverviewStatus.loaded) return;
     emit(state.copyWith(
-        billsBeingSent: () => {
-              ...state.billsBeingSent,
-              event.bill.id,
-            }));
+      billsBeingSent: {
+        ...state.billsBeingSent,
+        event.bill.id,
+      },
+    ));
     final result = await _billRepository.sendBill(event.bill);
 
     switch (result['enum']) {
       case SendResult.success:
         final bill = result['bill'] as List<Map<String, dynamic>>;
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () => BillResult(
+          status: BillOverviewStatus.sendMessage,
+          billResult: BillResult(
               message: 'Bill was added successfully.', billResult: bill),
         ));
+        _billRepository.deleteBillLocaly(event.bill.id);
       case SendResult.socketException:
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () =>
+          status: BillOverviewStatus.sendMessage,
+          billResult:
               const BillResult(message: 'Wrong server url. May be port.'),
         ));
       case SendResult.parseError:
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () => const BillResult(message: 'Site parse failed.'),
+          status: BillOverviewStatus.sendMessage,
+          billResult: const BillResult(message: 'Site parse failed.'),
         ));
       case SendResult.duplicates:
         final bill = result['bill'] as List<Map<String, dynamic>>;
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () => BillResult(
+          status: BillOverviewStatus.sendMessage,
+          billResult: BillResult(
               message: 'Duplicate was found in the Database.',
               billResult: bill),
         ));
       case SendResult.error:
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () => const BillResult(
+          status: BillOverviewStatus.sendMessage,
+          billResult: const BillResult(
               message:
                   'SendResult.error was received. This should not happen.'),
         ));
       case SendResult.typeMismatch:
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () =>
+          status: BillOverviewStatus.sendMessage,
+          billResult:
               const BillResult(message: 'Server sent not a valid json.'),
         ));
       default:
         emit(state.copyWith(
-          status: () => BillOverviewStatus.sendMessage,
-          billResult: () => const BillResult(
+          status: BillOverviewStatus.sendMessage,
+          billResult: const BillResult(
               message: 'It is more absurd then SendResult.error.'),
         ));
     }
     final billsBeingSent = {...state.billsBeingSent};
     billsBeingSent.remove(event.bill.id);
     emit(state.copyWith(
-      status: () => BillOverviewStatus.loaded,
-      billsBeingSent: () => billsBeingSent,
+      status: BillOverviewStatus.loaded,
+      billsBeingSent: billsBeingSent,
     ));
   }
 
@@ -147,8 +161,14 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
   ) async {
     if (state.status != BillOverviewStatus.loaded) return;
     final Uri urlParsed = Uri.parse(event.url);
-    if (!await launchUrl(urlParsed)) {
-      throw Exception('Could not launch $urlParsed');
+    try {
+      await launchUrl(urlParsed);
+    } catch (_) {
+      emit(state.copyWith(
+        status: BillOverviewStatus.error,
+        message: 'Broken url: $urlParsed',
+      ));
+      emit(state.copyWith(status: BillOverviewStatus.loaded));
     }
   }
 }

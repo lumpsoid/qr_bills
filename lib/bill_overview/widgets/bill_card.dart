@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr_bills/bill_overview/bloc/bill_overview_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:bill/bill.dart';
 
 class BillCard extends StatelessWidget {
@@ -13,39 +12,55 @@ class BillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    late final Widget billTypeIcon;
+    switch (bill.type) {
+      case BillType.qr:
+        billTypeIcon = const Icon(
+          Icons.qr_code,
+          color: Colors.blue,
+        );
+      case BillType.form:
+        billTypeIcon = const Icon(
+          Icons.text_fields,
+          color: Colors.grey,
+        );
+      case BillType.loading:
+        billTypeIcon = const Icon(Icons.sync);
+    }
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        PopupMenuButton<String>(
-          offset: const Offset(25.0, 30.0),
-          itemBuilder: (BuildContext context) {
-            return [
-              PopupMenuItem<String>(
-                // value: '',
-                child: const Text('Info'),
-                onTap: () {
-                  _showBillInfoDialog(context);
-                },
-              ),
-              const PopupMenuItem<String>(
-                value: 'option2',
-                child: Text('Select'),
-              ),
-              PopupMenuItem<String>(
-                // value: 'option3',
-                child: const Text('Delete'),
-                onTap: () {
-                  context
-                      .read<BillOverviewBloc>()
-                      .add(BillOverviewDeleteBill(bill.id));
-                },
-              ),
-            ];
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 10.0),
-          child: Text(bill.dateCreated, style: const TextStyle(fontSize: 16.0)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PopupMenuButton<String>(
+              offset: const Offset(25.0, 30.0),
+              itemBuilder: (BuildContext context) {
+                return [
+                  PopupMenuItem<String>(
+                    child: const Text('Info'),
+                    onTap: () {
+                      _showBillInfoDialog(context);
+                    },
+                  ),
+                  PopupMenuItem<String>(
+                    child: const Text('Delete'),
+                    onTap: () {
+                      context
+                          .read<BillOverviewBloc>()
+                          .add(BillOverviewDeleteBill(bill.id));
+                    },
+                  ),
+                ];
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: billTypeIcon,
+            ),
+            Text(bill.name, style: const TextStyle(fontSize: 16.0)),
+          ],
         ),
         IconButton(
           icon: BlocSelector<BillOverviewBloc, BillOverviewState, bool>(
@@ -67,7 +82,6 @@ class BillCard extends StatelessWidget {
             context.read<BillOverviewBloc>().add(BillOverviewSendBill(bill));
           },
         ),
-        // TextButton(onPressed: onPressed, child: child),
       ],
     );
   }
@@ -113,13 +127,5 @@ class BillCard extends StatelessWidget {
                 ),
               ],
             ));
-  }
-
-  Future<void> _launchURL(String url) async {
-// _launchURL(bill.body.getUrl())
-    final Uri urlParsed = Uri.parse(url);
-    if (!await launchUrl(urlParsed)) {
-      throw Exception('Could not launch $urlParsed');
-    }
   }
 }

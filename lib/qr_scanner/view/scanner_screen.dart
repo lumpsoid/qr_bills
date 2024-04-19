@@ -23,9 +23,9 @@ class ScannerPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<ScannerBloc, ScannerState>(
       listenWhen: (previous, current) {
-        return previous is ScannerLoaded &&
+        return previous != current &&
             current is ScannerLoaded &&
-            previous.url != current.url;
+            current.url.isNotEmpty;
       },
       listener: (context, state) {
         if (state is ScannerLoaded) {
@@ -50,7 +50,7 @@ class ScannerScreen extends StatelessWidget {
           MobileScanner(
             controller: MobileScannerController(
               detectionSpeed: DetectionSpeed.normal,
-              formats: [BarcodeFormat.qrCode],
+              torchEnabled: true,
             ),
             onDetect: (capture) {
               final List<Barcode> barcodes = capture.barcodes;

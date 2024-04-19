@@ -1,7 +1,8 @@
 import 'dart:convert';
+
 import 'package:meta/meta.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:settings_shared_api/settings_shared_api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// {@template settings_shared_api}
 /// A Very Good Project created by Very Good CLI.

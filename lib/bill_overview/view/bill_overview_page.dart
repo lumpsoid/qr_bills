@@ -2,23 +2,12 @@ import 'package:bill_repository/bill_repository.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qr_bills/add_screen/add_screen.dart';
 import 'package:qr_bills/bill_overview/bill_overview.dart';
 import 'package:qr_bills/form/form.dart';
 import 'package:qr_bills/qr_scanner/view/scanner_screen.dart';
 
 class BillsOverviewPage extends StatelessWidget {
   const BillsOverviewPage({super.key});
-
-  static MaterialPageRoute route() {
-    return MaterialPageRoute(
-      builder: (context) => BlocProvider(
-        create: (context) =>
-            BillOverviewBloc(billRepository: context.read<BillRepository>()),
-        child: const BillsOverviewPage(),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +25,27 @@ class BillsOverviewPage extends StatelessWidget {
             listener: (context, state) {
               final billResult = state.billResult;
               _showBillResultDialog(
-                  context, billResult.message, billResult.billResult);
+                context,
+                billResult.message,
+                billResult.billResult,
+              );
             },
           ),
-          //BlocListener<SubjectBloc, SubjectState>(
-          //  listener: (context, state) {
-          //    // TODO: implement listener
-          //  },
-          //),
+          BlocListener<BillOverviewBloc, BillOverviewState>(
+            listenWhen: (previous, current) =>
+                previous != current &&
+                current.status == BillOverviewStatus.error,
+            listener: (context, state) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                backgroundColor: Colors.red,
+                content: Text(
+                  state.message,
+                  style: const TextStyle(fontSize: 16.0),
+                ),
+                duration: const Duration(seconds: 2),
+              ));
+            },
+          ),
         ],
         child: const BillsOverviewScreen(),
       ),
@@ -79,7 +81,6 @@ class BillsOverviewPage extends StatelessWidget {
                             context
                                 .read<BillOverviewBloc>()
                                 .add(BillOverviewLaunchUrl(bill[0]['link']));
-                            // _launchURL(bill[0]['link']);
                           },
                       ),
                       maxLines: 2),
@@ -134,13 +135,15 @@ class BillsOverviewScreen extends StatelessWidget {
                       );
                     case BillOverviewStatus.loading:
                       return const CircularProgressIndicator();
-                    case BillOverviewStatus.error:
-                      return const Center(
-                        child: Text('Failed in process.'),
-                      );
-                    case BillOverviewStatus.loaded:
+                    case BillOverviewStatus.loaded || BillOverviewStatus.error:
                       final bills = state.bills;
                       if (bills.isEmpty) {
+                        if (state.status == BillOverviewStatus.error &&
+                            state.message.isEmpty) {
+                          return const Center(
+                            child: Text('Failed in bills set up.'),
+                          );
+                        }
                         return const Center(
                           child: Text('No bills found'),
                         );
@@ -165,20 +168,25 @@ class BillsOverviewScreen extends StatelessWidget {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton(
-            heroTag: 'qr',
-            onPressed: () {
-              Navigator.of(context).push(ScannerPage.route());
-            },
-            child: const Icon(Icons.qr_code_scanner),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: FloatingActionButton(
+              heroTag: 'qr',
+              onPressed: () {
+                Navigator.of(context).push(ScannerPage.route());
+              },
+              child: const Icon(Icons.qr_code_scanner),
+            ),
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'form',
-            onPressed: () {
-              Navigator.of(context).push(FormPage.route());
-            },
-            child: const Icon(Icons.article_outlined),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: FloatingActionButton(
+              heroTag: 'form',
+              onPressed: () {
+                Navigator.of(context).push(FormPage.route());
+              },
+              child: const Icon(Icons.article_outlined),
+            ),
           ),
         ],
       ),
@@ -203,9 +211,6 @@ class BillsOverviewScreen extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                //context
-                //    .read<BillOverviewBloc>()
-                //    .add(const BillOverviewServerUrlCanceled());
               },
               child: const Text('Cancel'),
             ),
