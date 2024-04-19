@@ -107,7 +107,6 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
           billResult: BillResult(
               message: 'Bill was added successfully.', billResult: bill),
         ));
-        _billRepository.deleteBillLocaly(event.bill.id);
       case SendResult.socketException:
         emit(state.copyWith(
           status: BillOverviewStatus.sendMessage,
