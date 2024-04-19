@@ -203,7 +203,7 @@ class _PriceField extends StatelessWidget {
       decoration: const InputDecoration(labelText: 'Price'),
       keyboardType: TextInputType.number,
       validator: (value) => value!.isEmpty ? 'Price is required' : null,
-      onSaved: (value) => context
+      onChanged: (value) => context
           .read<BillFormBloc>()
           .add(FormPriceChanged(double.parse(value!))),
       initialValue: '',
