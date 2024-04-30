@@ -1,16 +1,22 @@
 # qr_bills
 
-Keep track of you expenses
+## Overview
 
-## Getting Started
+A helper app to scan QR codes and send them to a server - [billdbgo](https://github.com/lumpsoid/billdbgo).
+To get use of this app you need to host this server yourself.
 
-This project is a starting point for a Flutter application.
+## Features
+- Scan QR codes
+- Create a bill from a form
+    - Autocompletion for tags founded on the server
+- Send the bill to a server
 
-A few resources to get you started if this is your first Flutter project:
+## Gallery
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Installation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+git clone https://github.com/lumpsoid/qr_bills
+cd qr_bills
+flutter build apk --release
+```
