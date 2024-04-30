@@ -40,9 +40,6 @@ class BillRepository {
     } else {
       result = await _restApi.sendForm(serverUrl, bill);
     }
-    if (result['enum'] == SendResult.success) {
-      await _localApi.deleteBill(bill.id);
-    }
     return result;
   }
 

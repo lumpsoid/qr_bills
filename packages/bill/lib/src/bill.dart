@@ -71,7 +71,7 @@ class Bill extends Equatable {
 
 abstract class BillBody extends Equatable {
   Map<String, dynamic> toDb();
-  Map<String, String> getPostBody({required String force});
+  Map<String, dynamic> getPostBody({required bool force});
   String status();
   String getUrl();
 }
@@ -82,7 +82,7 @@ class BillBodyQr implements BillBody {
   final String url;
 
   @override
-  Map<String, String> getPostBody({required String force}) {
+  Map<String, dynamic> getPostBody({required bool force}) {
     return {'link': url, 'force': force};
   }
 
@@ -140,16 +140,16 @@ class BillBodyForm implements BillBody {
   final double exchangeRate;
 
   @override
-  Map<String, String> getPostBody({required String force}) {
+  Map<String, dynamic> getPostBody({required bool force}) {
     return {
       'name': name,
       'date':
           "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}",
-      'price': price.toString(),
+      'price': price,
       'currency': currency,
       'country': country,
       'tags': tags,
-      'exchange_rate': exchangeRate.toString(),
+      'exchange_rate': exchangeRate,
       'force': force,
     };
   }

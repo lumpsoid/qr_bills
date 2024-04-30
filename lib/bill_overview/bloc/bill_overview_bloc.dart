@@ -100,8 +100,14 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
     final result = await _billRepository.sendBill(event.bill);
 
     switch (result['enum']) {
+      case SendResult.error:
+        emit(state.copyWith(
+          status: BillOverviewStatus.error,
+          billResult: BillResult(message: result['message'] as String),
+        ));
       case SendResult.success:
         final bill = result['bill'] as List<Map<String, dynamic>>;
+        await _billRepository.deleteBillLocaly(event.bill.id);
         emit(state.copyWith(
           status: BillOverviewStatus.sendMessage,
           billResult: BillResult(
@@ -113,25 +119,14 @@ class BillOverviewBloc extends Bloc<BillOverviewEvent, BillOverviewState> {
           billResult:
               const BillResult(message: 'Wrong server url. May be port.'),
         ));
-      case SendResult.parseError:
-        emit(state.copyWith(
-          status: BillOverviewStatus.sendMessage,
-          billResult: const BillResult(message: 'Site parse failed.'),
-        ));
       case SendResult.duplicates:
         final bill = result['bill'] as List<Map<String, dynamic>>;
+        await _billRepository.deleteBillLocaly(event.bill.id);
         emit(state.copyWith(
           status: BillOverviewStatus.sendMessage,
           billResult: BillResult(
               message: 'Duplicate was found in the Database.',
               billResult: bill),
-        ));
-      case SendResult.error:
-        emit(state.copyWith(
-          status: BillOverviewStatus.sendMessage,
-          billResult: const BillResult(
-              message:
-                  'SendResult.error was received. This should not happen.'),
         ));
       case SendResult.typeMismatch:
         emit(state.copyWith(

@@ -39,7 +39,7 @@ class BillsOverviewPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 backgroundColor: Colors.red,
                 content: Text(
-                  state.message,
+                  state.billResult.message,
                   style: const TextStyle(fontSize: 16.0),
                 ),
                 duration: const Duration(seconds: 2),

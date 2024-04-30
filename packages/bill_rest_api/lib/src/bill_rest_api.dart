@@ -9,8 +9,7 @@ enum SendResult {
   error,
   duplicates,
   socketException,
-  parseError,
-  typeMismatch
+  typeMismatch,
 }
 
 /// {@template bill_rest_api}
@@ -34,26 +33,31 @@ class BillRestApi {
 
   Map<String, dynamic> parseResponse(String source) {
     final jsonResponse = jsonDecode(source) as Map<String, dynamic>;
+    final message = jsonResponse['message'] as String;
     switch (jsonResponse['success'] as String) {
-      case 'parse_error':
+      case 'error':
         return {
-          'enum': SendResult.parseError,
-          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
+          'enum': SendResult.error,
+          'message': message,
+          'bill': [],
         };
       case 'success':
         return {
           'enum': SendResult.success,
           'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
+          'message': message,
         };
       case 'duplicates':
         return {
           'enum': SendResult.duplicates,
           'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
+          'message': message,
         };
       default:
         return {
           'enum': SendResult.error,
-          'bill': _parseBillList(jsonResponse['bill'] as List<dynamic>),
+          'message': message,
+          'bill': [],
         };
     }
   }
@@ -62,7 +66,7 @@ class BillRestApi {
     Response response;
     final urlServer = Uri.http(serverUrl, '$serverApi/qr');
 
-    final postBody = bill.body.getPostBody(force: 'false');
+    final postBody = bill.body.getPostBody(force: false);
     try {
       response = await post(
         urlServer,
@@ -87,7 +91,7 @@ class BillRestApi {
     Response response;
     final urlServer = Uri.http(serverUrl, '$serverApi/form');
 
-    final postBody = bill.body.getPostBody(force: 'false');
+    final postBody = bill.body.getPostBody(force: false);
     try {
       response = await post(
         urlServer,
@@ -111,7 +115,7 @@ class BillRestApi {
 
   Future<List<String>> getCurrencies(String serverUrl) async {
     Response response;
-    final urlServer = Uri.http(serverUrl, '$serverApi/get/currencies');
+    final urlServer = Uri.http(serverUrl, '$serverApi/currencies');
     try {
       response = await get(
         urlServer,
@@ -120,9 +124,9 @@ class BillRestApi {
       rethrow;
     }
 
-    // if (response.headers['content-type'] != 'application/json') {
-    //   return ['SOMETHING WRONG'];
-    // }
+    if (response.statusCode != 200) {
+      return [];
+    }
     final result = jsonDecode(response.body) as List<dynamic>;
     final stringList = result
         .map<String>(
@@ -135,7 +139,7 @@ class BillRestApi {
 
   Future<List<String>> getTags(String serverUrl) async {
     Response response;
-    final urlServer = Uri.http(serverUrl, '$serverApi/get/tags');
+    final urlServer = Uri.http(serverUrl, '$serverApi/tags');
     try {
       response = await get(
         urlServer,
@@ -144,9 +148,9 @@ class BillRestApi {
       rethrow;
     }
 
-    // if (response.headers['content-type'] != 'application/json') {
-    //   return ['SOMETHING WRONG'];
-    // }
+    if (response.statusCode != 200) {
+      return [];
+    }
     final result = jsonDecode(response.body) as List<dynamic>;
     final stringList = result
         .map<String>(
