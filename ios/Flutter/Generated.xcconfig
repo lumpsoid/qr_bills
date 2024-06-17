@@ -1,6 +1,6 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=/home/qq/Documents/Programming/flutter/flutter
-FLUTTER_APPLICATION_PATH=/home/qq/Documents/Programming/flutter/projects-flutter/qr_bills
+FLUTTER_ROOT=/home/qq/Documents/programming/flutter/flutter
+FLUTTER_APPLICATION_PATH=/home/qq/Documents/programming/flutter/projects-flutter/qr_bills
 COCOAPODS_PARALLEL_CODE_SIGN=true
 FLUTTER_TARGET=lib/main.dart
 FLUTTER_BUILD_DIR=build
