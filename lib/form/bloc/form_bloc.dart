@@ -17,6 +17,7 @@ class BillFormBloc extends Bloc<FormEvent, BillFormState> {
     on<FormTagsChanged>(_onTagsChanged);
     on<FormDateChanged>(_onDateChanged);
     on<FormPriceChanged>(_onPriceChanged);
+    on<FormExchangeRateChanged>(_onExchangeRateChanged);
     on<FormCurrencyChanged>(_onCurrencyChanged);
   }
   final BillRepository _billRepository;
@@ -99,7 +100,19 @@ class BillFormBloc extends Bloc<FormEvent, BillFormState> {
   ) async {
     if (state is BillFormLoaded) {
       final stateLoaded = state as BillFormLoaded;
-      emit(stateLoaded.copyWith(price: event.price));
+      final price = double.tryParse(event.price) ?? 0.0;
+      emit(stateLoaded.copyWith(price: price));
+    }
+  }
+
+  Future<void> _onExchangeRateChanged(
+    FormExchangeRateChanged event,
+    Emitter<BillFormState> emit,
+  ) async {
+    if (state is BillFormLoaded) {
+      final stateLoaded = state as BillFormLoaded;
+      final rate = double.tryParse(event.rate) ?? 0.0;
+      emit(stateLoaded.copyWith(exchangeRate: rate));
     }
   }
 

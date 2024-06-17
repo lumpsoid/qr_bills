@@ -43,12 +43,21 @@ final class FormDateChanged extends FormEvent {
 }
 
 final class FormPriceChanged extends FormEvent {
-  final double price;
-
   const FormPriceChanged(this.price);
+
+  final String price;
 
   @override
   List<Object> get props => [price];
+}
+
+final class FormExchangeRateChanged extends FormEvent {
+  const FormExchangeRateChanged(this.rate);
+
+  final String rate;
+
+  @override
+  List<Object> get props => [rate];
 }
 
 final class FormCurrencyChanged extends FormEvent {

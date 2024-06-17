@@ -203,9 +203,8 @@ class _PriceField extends StatelessWidget {
       decoration: const InputDecoration(labelText: 'Price'),
       keyboardType: TextInputType.number,
       validator: (value) => value!.isEmpty ? 'Price is required' : null,
-      onChanged: (value) => context
-          .read<BillFormBloc>()
-          .add(FormPriceChanged(double.parse(value!))),
+      onChanged: (value) =>
+          context.read<BillFormBloc>().add(FormPriceChanged(value)),
       initialValue: '',
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
@@ -253,9 +252,11 @@ class _ExchageRateField extends StatelessWidget {
           return TextFormField(
             decoration: const InputDecoration(labelText: 'Exchange Rate'),
             keyboardType: TextInputType.number,
+            validator: (value) =>
+                value!.isEmpty ? 'Exchange rate is required' : null,
             onChanged: (value) => context
                 .read<BillFormBloc>()
-                .add(FormPriceChanged(double.parse(value))),
+                .add(FormExchangeRateChanged(value)),
             initialValue: state.exchangeRate.toString(),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
