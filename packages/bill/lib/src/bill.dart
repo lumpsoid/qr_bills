@@ -54,6 +54,7 @@ class Bill extends Equatable {
     return {
       ...body.toDb(),
       'id': id,
+      'bill_name': name,
       'type': type.toString(),
       'date_created': dateCreated,
     };
