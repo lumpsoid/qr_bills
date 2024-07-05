@@ -11,8 +11,9 @@ class SettingsSharedApi {
   /// {@macro settings_shared_api}
   SettingsSharedApi({
     required SharedPreferences plugin,
+    Settings? settings,
   }) : _plugin = plugin {
-    _settings = _init();
+    _settings = settings ?? _init();
   }
 
   final SharedPreferences _plugin;
