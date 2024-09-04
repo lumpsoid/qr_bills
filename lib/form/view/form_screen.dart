@@ -37,29 +37,42 @@ class FormScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bill Form'),
-      ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(20.0),
-        child: Form(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _NameField(),
-              _TagField(),
-              _DatePickField(),
-              _PriceField(),
-              _CurrencyField(),
-              _ExchageRateField(),
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: _SubmitButton(),
+    return const Scaffold(
+      body: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.all(8),
+              child: Form(
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _NameField(),
+                    _TagField(),
+                    _DatePickField(),
+                    _PriceField(),
+                    _CurrencyField(),
+                    _ExchageRateField(),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _SubmitButton(),
+                    _CancelButton(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -82,6 +95,20 @@ class _SubmitButton extends StatelessWidget {
         ));
       },
       child: const Text('Submit'),
+    );
+  }
+}
+
+class _CancelButton extends StatelessWidget {
+  const _CancelButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () {
+        Navigator.of(context).pop();
+      },
+      child: const Text('Cancel'),
     );
   }
 }

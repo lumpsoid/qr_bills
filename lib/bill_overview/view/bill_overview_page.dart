@@ -104,24 +104,6 @@ class BillsOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bills'),
-        actions: [
-          PopupMenuButton<String>(
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem<String>(
-                  value: 'chooseServer',
-                  child: const Text('Server URL'),
-                  onTap: () async {
-                    await _dialogEditServerUrl(context);
-                  },
-                ),
-              ];
-            },
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -145,14 +127,29 @@ class BillsOverviewScreen extends StatelessWidget {
                           );
                         }
                         return const Center(
-                          child: Text('No bills found'),
+                          child: Text('No bills'),
                         );
                       }
-                      return ListView.builder(
-                        itemCount: bills.length,
-                        itemBuilder: (context, index) {
-                          return BillCard(bill: bills[index], index: index);
-                        },
+
+                      final height = MediaQuery.of(context).size.height;
+                      return CustomScrollView(
+                        reverse: true,
+                        slivers: [
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final bill = bills[index];
+                                return BillCard(bill: bill, index: index);
+                              },
+                              childCount: bills.length,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              height: height / 2,
+                            ),
+                          ),
+                        ],
                       );
                     default:
                       return const Center(
@@ -162,35 +159,73 @@ class BillsOverviewScreen extends StatelessWidget {
                 },
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.menu),
+                    itemBuilder: (BuildContext context) {
+                      return [
+                        PopupMenuItem<String>(
+                          value: 'chooseServer',
+                          child: const Text('Server URL'),
+                          onTap: () async {
+                            await _dialogEditServerUrl(context);
+                          },
+                        ),
+                      ];
+                    },
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () =>
+                            Navigator.of(context).push(ScannerPage.route()),
+                        color: Colors.blue,
+                        icon: const Icon(Icons.qr_code_scanner),
+                      ),
+                      IconButton(
+                        onPressed: () =>
+                            Navigator.of(context).push(FormPage.route()),
+                        color: Colors.orange,
+                        icon: const Icon(Icons.article_outlined),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: FloatingActionButton(
-              heroTag: 'qr',
-              onPressed: () {
-                Navigator.of(context).push(ScannerPage.route());
-              },
-              child: const Icon(Icons.qr_code_scanner),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: FloatingActionButton(
-              heroTag: 'form',
-              onPressed: () {
-                Navigator.of(context).push(FormPage.route());
-              },
-              child: const Icon(Icons.article_outlined),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      //floatingActionButton: Column(
+      //  mainAxisSize: MainAxisSize.min,
+      //  children: [
+      //    Padding(
+      //      padding: const EdgeInsets.all(8.0),
+      //      child: FloatingActionButton(
+      //        heroTag: 'qr',
+      //        onPressed: () {
+      //          Navigator.of(context).push(ScannerPage.route());
+      //        },
+      //        child: const Icon(Icons.qr_code_scanner),
+      //      ),
+      //    ),
+      //    Padding(
+      //      padding: const EdgeInsets.all(8.0),
+      //      child: FloatingActionButton(
+      //        heroTag: 'form',
+      //        onPressed: () {
+      //          Navigator.of(context).push(FormPage.route());
+      //        },
+      //        child: const Icon(Icons.article_outlined),
+      //      ),
+      //    ),
+      //  ],
+      //),
+      //floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
